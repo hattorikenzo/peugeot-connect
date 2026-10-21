@@ -1,0 +1,2 @@
+[functions.peugeot-api]
+verify_jwt = false
