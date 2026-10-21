@@ -1,0 +1,27 @@
+:root{font-family:Inter,system-ui,Arial,sans-serif;color:#17304a;background:#f3f6fa}*{box-sizing:border-box}body{margin:0}header{background:#123b64;color:#fff;padding:18px max(20px,calc((100vw - 1140px)/2));display:flex;justify-content:space-between;align-items:center;gap:12px}header h1{margin:2px 0;font-size:25px}header small{opacity:.75;letter-spacing:.13em}.pill{background:#315c81;padding:8px 12px;border-radius:30px;font-size:12px}main{max-width:1180px;margin:auto;padding:22px}.panel{background:white;border:1px solid #e1e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 9px #17304a08;margin-bottom:16px}.login{max-width:450px;margin:50px auto}h2,h3{margin-top:0}p{line-height:1.45}form{display:grid;gap:15px}label{display:grid;gap:7px;font-weight:600;font-size:13px}input{border:1px solid #b9c8d5;border-radius:8px;padding:12px;font:inherit}button{background:#125d99;color:#fff;border:0;border-radius:8px;padding:11px 16px;font-weight:700;cursor:pointer}button:disabled{opacity:.6;cursor:wait}button.secondary{background:#e8eef4;color:#17304a}.toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.toolbar p{margin-top:-10px;color:#6a7b8b}.actions{display:flex;gap:9px}.cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.metric{display:grid;gap:9px}.metric span{color:#697e91;font-size:13px}.metric strong{font-size:23px;overflow-wrap:anywhere}#map{height:370px;border-radius:10px;background:#e4ebf0}.columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}.list{display:grid;gap:8px;max-height:360px;overflow:auto}.item{padding:10px 0;border-bottom:1px solid #e7edf3;font-size:13px;overflow-wrap:anywhere}.item b{display:block;margin-bottom:3px}.muted{font-size:12px;color:#718396}.message{min-height:24px;color:#a33c2c;font-size:14px}[hidden]{display:none!important}@media(max-width:760px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}.columns{grid-template-columns:1fr}#map{height:290px}main{padding:12px}.panel{padding:15px}.metric strong{font-size:19px}}
+
+/* Leaflet fallback: keeps map tiles confined even if CDN leaflet.css fails to load. */
+#map{position:relative;display:block;width:100%;overflow:hidden;isolation:isolate;z-index:0}
+#map.leaflet-container{overflow:hidden;position:relative;outline:0}
+#map .leaflet-pane,#map .leaflet-tile,#map .leaflet-marker-icon,#map .leaflet-marker-shadow,#map .leaflet-tile-container,#map .leaflet-pane>svg,#map .leaflet-pane>canvas{position:absolute;left:0;top:0}
+#map .leaflet-map-pane,#map .leaflet-tile-pane,#map .leaflet-overlay-pane,#map .leaflet-shadow-pane,#map .leaflet-marker-pane,#map .leaflet-tooltip-pane,#map .leaflet-popup-pane{position:absolute;left:0;top:0;width:100%;height:100%}
+#map .leaflet-map-pane{z-index:400}
+#map .leaflet-tile-pane{z-index:200}
+#map .leaflet-overlay-pane{z-index:400}
+#map .leaflet-shadow-pane{z-index:500}
+#map .leaflet-marker-pane{z-index:600}
+#map .leaflet-tooltip-pane{z-index:650}
+#map .leaflet-popup-pane{z-index:700}
+#map .leaflet-tile{visibility:inherit;max-width:none!important;max-height:none!important;border:0!important;padding:0!important;margin:0!important;user-select:none;-webkit-user-select:none}
+#map .leaflet-tile-container{pointer-events:none}
+#map .leaflet-control-container .leaflet-top,#map .leaflet-control-container .leaflet-bottom{position:absolute;z-index:800;pointer-events:none}
+#map .leaflet-control-container .leaflet-top{top:0}
+#map .leaflet-control-container .leaflet-bottom{bottom:0}
+#map .leaflet-control-container .leaflet-left{left:0}
+#map .leaflet-control-container .leaflet-right{right:0}
+#map .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both;margin:10px}
+#map .leaflet-right .leaflet-control{float:right}
+#map .leaflet-control-attribution{background:#ffffffd9;padding:2px 6px;font:11px Arial,sans-serif}
+#map .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;background:white;color:#222;text-decoration:none;font:bold 20px Arial,sans-serif;border-bottom:1px solid #ddd}
+#map .leaflet-control-zoom{border:2px solid #0003;border-radius:5px;overflow:hidden}
+#map .leaflet-marker-icon,#map .leaflet-marker-shadow{max-width:none!important}
