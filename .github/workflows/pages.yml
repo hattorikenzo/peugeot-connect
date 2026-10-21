@@ -1,0 +1,38 @@
+name: Pubblica Peugeot Connect
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: peugeot-pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Genera configurazione pubblica
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          test -n "$SUPABASE_URL"
+          test -n "$SUPABASE_PUBLISHABLE_KEY"
+          python3 - <<'PY'
+          import json, os, pathlib
+          obj = {'supabaseUrl':os.environ['SUPABASE_URL'], 'supabasePublishableKey':os.environ['SUPABASE_PUBLISHABLE_KEY']}
+          pathlib.Path('site/config.js').write_text('window.PEUGEOT_CONFIG = '+json.dumps(obj)+';\n')
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
