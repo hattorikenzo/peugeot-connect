@@ -10,6 +10,7 @@ if(!cfg||!cfg.supabaseUrl||!cfg.supabasePublishableKey||cfg.supabaseUrl.includes
 }
 const client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
 let map,marker,position=null,lastGpsTime=null,animation=null,refreshTimer=null,loading=false,signedIn=false,driving=false,latestData=null;
+let mapResizeObserver=null;
 const carSvg=`<svg class="peugeot-car-svg" viewBox="0 0 52 88" xmlns="http://www.w3.org/2000/svg">
 <rect x="3" y="18" width="7" height="18" rx="3" fill="#203246"/><rect x="42" y="18" width="7" height="18" rx="3" fill="#203246"/>
 <rect x="3" y="54" width="7" height="17" rx="3" fill="#203246"/><rect x="42" y="54" width="7" height="17" rx="3" fill="#203246"/>
@@ -39,6 +40,12 @@ function moveMarker(lat,lon){
  if(t<1)animation=requestAnimationFrame(tick);else animation=null;};
  animation=requestAnimationFrame(tick);
 }
+function resizeMap(){
+ if(!map)return;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{
+  map.invalidateSize({pan:false,debounceMoveend:true});
+ }));
+}
 function drawMap(status,state){
  const lat=Number(status.latitude),lon=Number(status.longitude);
  if(!Number.isFinite(lat)||!Number.isFinite(lon)||!window.L)return;
@@ -47,6 +54,12 @@ function drawMap(status,state){
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
   L.control.zoom({position:'bottomright'}).addTo(map);
   marker=L.marker([lat,lon],{icon:markerIcon(state)}).addTo(map).bindPopup('Ultima posizione Geotab della Peugeot 2008');
+  if(window.ResizeObserver){
+   mapResizeObserver=new ResizeObserver(()=>resizeMap());
+   mapResizeObserver.observe($('map'));
+  }
+  setTimeout(resizeMap,100);
+  setTimeout(resizeMap,500);
  }else{
   const changed=!position||position.lat!==lat||position.lon!==lon;
   const newer=status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime));
@@ -57,7 +70,7 @@ function drawMap(status,state){
  position={lat,lon};
  if(status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime)))lastGpsTime=status.dateTime;
  setState(state,status.bearing);
- requestAnimationFrame(()=>map.invalidateSize({pan:false}));
+ resizeMap();
 }
 function showPanel(panel){
  const open=panel!=='map';$('drawer').hidden=!open;
@@ -67,7 +80,7 @@ function showPanel(panel){
   const active=b.dataset.panel===panel;b.classList.toggle('active',active);
   if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
  });
- if(map)setTimeout(()=>map.invalidateSize({pan:false}),80);
+ if(map)setTimeout(resizeMap,80);
 }
 function toggle(logged){
  signedIn=logged;$('login-panel').hidden=logged;$('dashboard').hidden=!logged;
@@ -145,6 +158,8 @@ async function load(){
   const {data,error}=await client.functions.invoke('peugeot-api',{body:{action:'dashboard'}});
   if(error){let msg=error.message;try{msg=(await error.context?.json())?.error||msg}catch{}throw Error(msg)}
   if(data?.error)throw Error(data.error);
+  // Wait for the dashboard to be painted before Leaflet measures the map.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
   render(data);text('connection','Dati aggiornati');
  }catch(e){text('message',e.message||String(e));text('connection','Errore dati')}
  finally{loading=false;$('refresh').disabled=false;schedule()}
@@ -173,6 +188,7 @@ $('lookup-address').addEventListener('click',async()=>{
  }catch{text('address','Indirizzo non disponibile')}
  finally{$('lookup-address').disabled=false}
 });
-document.addEventListener('visibilitychange',()=>{if(signedIn&&document.visibilityState==='visible')load()});
+window.addEventListener('resize',resizeMap);
+document.addEventListener('visibilitychange',()=>{if(signedIn&&document.visibilityState==='visible'){resizeMap();load()}});
 client.auth.getSession().then(async({data})=>{toggle(!!data.session);if(data.session)await load()}).catch(e=>text('message',e.message));
 })();
