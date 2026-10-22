@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#123b64" />
+  <title>Peugeot Connect</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyo1hY8mQ+uT7rJk=" crossorigin="" />
+  <link rel="stylesheet" href="assets/style.css?v=8b" />
+</head>
+<body>
+  <header><div><small>MYGEOTAB · SOLO LETTURA</small><h1>Peugeot Connect</h1></div><span id="connection" class="pill">Non collegato</span></header>
+  <main>
+    <section id="login-panel" class="panel login">
+      <h2>Accesso riservato</h2><p>Accedi con il tuo utente Supabase autorizzato. Non inserire qui la password Geotab.</p>
+      <form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required /></label><label>Password<input id="password" type="password" autocomplete="current-password" required /></label><button type="submit">Accedi</button></form>
+    </section>
+    <section id="dashboard" hidden>
+      <div class="toolbar"><div><h2 id="vehicle-name">Peugeot 2008</h2><p id="updated">In attesa dei dati</p></div><div class="actions"><button id="refresh" type="button">Aggiorna</button><button id="logout" class="secondary" type="button">Esci</button></div></div>
+      <div class="cards">
+        <article class="panel metric"><span>Stato</span><strong id="driving">—</strong></article>
+        <article class="panel metric"><span>Velocità</span><strong id="speed">—</strong></article>
+        <article class="panel metric"><span>Ultimo GPS</span><strong id="gps-time">—</strong></article>
+        <article class="panel metric"><span>Comunicazione</span><strong id="communicating">—</strong></article>
+      </div>
+      <section class="panel"><h3>Ultima posizione registrata</h3><div class="location-line"><span id="address">Indirizzo non richiesto</span><button id="lookup-address" type="button" class="secondary">Mostra indirizzo</button></div><div id="map" role="region" aria-label="Mappa ultima posizione veicolo"></div><p class="muted">La posizione può essere storica. Non è una localizzazione in tempo reale garantita.</p></section>
+      <div class="cards details"><article class="panel metric"><span>Carburante</span><strong id="fuel">—</strong><small id="fuel-time" class="muted">Nessun dato recente</small></article><article class="panel metric"><span>Alimentazione GO9B</span><strong id="battery">—</strong><small id="battery-time" class="muted">Nessun dato recente</small></article><article class="panel metric"><span>Porte</span><strong id="doors">—</strong><small id="doors-time" class="muted">Nessun dato recente</small></article><article class="panel metric"><span>Portellone</span><strong id="hatch">—</strong><small id="hatch-time" class="muted">Nessun dato recente</small></article></div><section class="panel" aria-labelledby="access-title">
+        <h3 id="access-title">Porte e portellone · ultime letture</h3>
+        <p class="muted">Dati storici Geotab, non una conferma dello stato attuale. Il portello di carico è un segnale ancora da associare con certezza al bagagliaio.</p>
+        <div id="access-signals" class="access-grid" aria-live="polite"><div class="item">Nessun dato caricato</div></div>
+      </section>
+      <div class="columns"><section class="panel"><h3>Ultimi viaggi</h3><div id="trips" class="list">Nessun dato caricato</div></section><section class="panel"><h3>Telemetria recente</h3><p class="muted">Campioni tecnici Geotab (identificativi diagnostici). Interpretazione dettagliata in una versione successiva.</p><div id="telemetry" class="list">Nessun dato caricato</div></section></div>
+    </section>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="config.js"></script>
+  <script src="assets/app.js?v=8b"></script>
+</body>
+</html>
