@@ -1,3 +1,51 @@
+
+Loading older messages…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 (() => {
 'use strict';
 const $=id=>document.getElementById(id);
@@ -12,18 +60,33 @@ const client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishabl
 let activeBaseLayer=null,hybridLabels=null,mapMode="standard",mapLayerError=false;
 let map,marker,position=null,lastGpsTime=null,animation=null,refreshTimer=null,loading=false,signedIn=false,driving=false,latestData=null;
 let mapResizeObserver=null;
-const carSvg=`<svg class="peugeot-car-svg" viewBox="0 0 52 88" xmlns="http://www.w3.org/2000/svg">
-<rect x="3" y="18" width="7" height="18" rx="3" fill="#203246"/><rect x="42" y="18" width="7" height="18" rx="3" fill="#203246"/>
-<rect x="3" y="54" width="7" height="17" rx="3" fill="#203246"/><rect x="42" y="54" width="7" height="17" rx="3" fill="#203246"/>
-<path d="M15 4 Q26 0 37 4 L44 16 L45 69 Q44 79 36 83 L16 83 Q8 79 7 69 L8 16Z" fill="var(--car-color)" stroke="#e4f1f9" stroke-width="1.6"/>
-<path d="M15 10 L37 10 L40 25 L12 25Z" fill="#9ac8df" stroke="var(--car-dark)" stroke-width="1.4"/>
-<path d="M12 30 L40 30 L42 56 L10 56Z" fill="#193e55" stroke="#86b9d1"/>
-<path d="M12 61 L40 61 L37 75 L15 75Z" fill="#8db8cc" stroke="var(--car-dark)"/>
-<path d="M12 14 L16 13 M36 13 L40 14" stroke="#f7f3df" stroke-width="3" stroke-linecap="round"/>
-<path d="M12 79 L17 80 M35 80 L40 79" stroke="#f6a4a9" stroke-width="3" stroke-linecap="round"/>
+const carSvg=`<svg class="peugeot-car-svg" viewBox="0 0 40 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Peugeot 2008 SUV vista dall’alto">
+<!-- Quattro ruote e assetto rialzato -->
+<rect x="1.1" y="12" width="5.5" height="13" rx="2" fill="#202832" stroke="#0d1923" stroke-width=".6"/>
+<rect x="33.4" y="12" width="5.5" height="13" rx="2" fill="#202832" stroke="#0d1923" stroke-width=".6"/>
+<rect x="1.1" y="40" width="5.5" height="13" rx="2" fill="#202832" stroke="#0d1923" stroke-width=".6"/>
+<rect x="33.4" y="40" width="5.5" height="13" rx="2" fill="#202832" stroke="#0d1923" stroke-width=".6"/>
+<!-- Silhouette SUV: muso alto, abitacolo ampio, posteriore squadrato -->
+<path d="M13 2 Q20 -.1 27 2 L32 8 Q34 12 34 18 L34 50 Q34 57 30 61 Q20 64 10 61 Q6 57 6 50 L6 18 Q6 12 8 8Z" fill="var(--car-color)" stroke="#f0f6fa" stroke-width="1.4"/>
+<!-- Cofano con nervature -->
+<path d="M11 9 Q20 6 29 9 L30 16 L10 16Z" fill="var(--car-color)" stroke="var(--car-dark)" stroke-width=".7"/>
+<path d="M13 9 L12 14 M27 9 L28 14" stroke="#ffffff" stroke-opacity=".4" stroke-width=".8"/>
+<!-- Parabrezza ampio e inclinato -->
+<path d="M10 18 L30 18 L29 25 Q20 27 11 25Z" fill="#a6d9ed" stroke="#274b63" stroke-width="1"/>
+<path d="M12 19 L27 19" stroke="#e8faff" stroke-opacity=".7" stroke-width="1"/>
+<!-- Tetto panoramico rialzato e longheroni -->
+<path d="M11 27 Q20 25 29 27 L29 43 Q20 46 11 43Z" fill="var(--car-dark)" stroke="#c9e1e9" stroke-width=".8"/>
+<path d="M14 29 H26 V40 H14Z" fill="#4e7687" opacity=".85"/>
+<path d="M8.7 25 L8.7 47 M31.3 25 L31.3 47" stroke="#e4e9e8" stroke-width="1.4" stroke-linecap="round"/>
+<!-- Lunotto e portellone -->
+<path d="M11 46 Q20 48 29 46 L30 53 Q20 56 10 53Z" fill="#8db8ce" stroke="#28485d" stroke-width=".9"/>
+<path d="M10 56 Q20 59 30 56" fill="none" stroke="var(--car-dark)" stroke-width="1"/>
+<!-- Firma luminosa anteriore e fanali posteriori -->
+<path d="M8.8 8 L12 7 M28 7 L31.2 8" stroke="#fff4cf" stroke-width="2.3" stroke-linecap="round"/>
+<path d="M8.8 57 L13 59 M27 59 L31.2 57" stroke="#ff9b9b" stroke-width="2.5" stroke-linecap="round"/>
 </svg>`;
 function markerIcon(state){
- return L.divIcon({className:'peugeot-icon',html:`<div class="peugeot-marker ${state}"><div class="peugeot-car-rotate">${state==='moving'?'<span class="direction-arrow">▲</span>':''}${carSvg}</div></div>`,iconSize:[48,75],iconAnchor:[24,38]});
+ return L.divIcon({className:'peugeot-icon',html:`<div class="peugeot-marker ${state}"><div class="peugeot-car-rotate">${state==='moving'?'<span class="direction-arrow">▲</span>':''}${carSvg}</div></div>`,iconSize:[30,48],iconAnchor:[15,24]});
 }
 function setState(state,bearing){
  $('state-dot').className='dot '+state;
