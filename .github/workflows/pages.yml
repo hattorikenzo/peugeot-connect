@@ -1,38 +1,80 @@
+
 name: Pubblica Peugeot Connect
+
 on:
   workflow_dispatch:
   push:
     branches: [main]
+
 permissions:
   contents: read
   pages: write
   id-token: write
+
 concurrency:
   group: peugeot-pages
   cancel-in-progress: true
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Scarica repository
+        uses: actions/checkout@v4
+
       - name: Genera configurazione pubblica
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          GOOGLE_MAPS_API_KEY: ${{ vars.GOOGLE_MAPS_API_KEY }}
+
         run: |
+          set -euo pipefail
+
           test -n "$SUPABASE_URL"
           test -n "$SUPABASE_PUBLISHABLE_KEY"
+          test -n "$GOOGLE_MAPS_API_KEY"
+
           python3 - <<'PY'
-          import json, os, pathlib
-          obj = {'supabaseUrl':os.environ['SUPABASE_URL'], 'supabasePublishableKey':os.environ['SUPABASE_PUBLISHABLE_KEY']}
-          pathlib.Path('site/config.js').write_text('window.PEUGEOT_CONFIG = '+json.dumps(obj)+';\n')
+          import json
+          import os
+          import pathlib
+
+          config = {
+              "supabaseUrl": os.environ["SUPABASE_URL"],
+              "supabasePublishableKey": os.environ["SUPABASE_PUBLISHABLE_KEY"],
+              "googleMapsApiKey": os.environ["GOOGLE_MAPS_API_KEY"]
+          }
+
+          output = pathlib.Path("site/config.js")
+          output.parent.mkdir(parents=True, exist_ok=True)
+
+          output.write_text(
+              "window.PEUGEOT_CONFIG = " +
+              json.dumps(config) +
+              ";\n",
+              encoding="utf-8"
+          )
+
+          print("Configurazione Peugeot Connect generata.")
+          print("Supabase URL: presente")
+          print("Supabase Publishable Key: presente")
+          print("Google Maps API Key: presente")
           PY
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+
+      - name: Configura GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Prepara file per GitHub Pages
+        uses: actions/upload-pages-artifact@v3
         with:
           path: site
-      - id: deployment
+
+      - name: Pubblica Peugeot Connect
+        id: deployment
         uses: actions/deploy-pages@v4
