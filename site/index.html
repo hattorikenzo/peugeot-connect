@@ -1,10 +1,26 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="assets/style.css?v=100"></head>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="assets/style.css?v=100"><style>
+/* Peugeot Connect: riepilogo GPS e stato veicolo */
+.map-overlay{min-width:260px;max-width:min(390px,calc(100vw - 28px))}
+.pc-gps-label{display:block;margin-top:7px;font-size:11px;color:#64748b;font-weight:600}
+.pc-gps-value{display:block;margin:2px 0 9px;font-size:13px;font-weight:700;color:#173b65}
+.pc-summary{display:flex;align-items:center;flex-wrap:wrap;gap:7px;border-top:1px solid #dce3ed;padding-top:8px;font-size:12px}
+.pc-summary .pc-status{display:inline-flex;align-items:center;gap:5px;min-width:0}
+.pc-summary .pc-speed,.pc-summary .pc-odo{white-space:nowrap;font-weight:700;color:#183858}
+.pc-summary .pc-speed::before,.pc-summary .pc-odo::before{content:'|';color:#cbd5e1;margin-right:7px;font-weight:400}
+.pc-summary .dot{flex-shrink:0}
+.pc-summary .pc-status-text{font-weight:600}
+.pc-summary .pc-status-text.moving{color:#16813b}
+.pc-summary .pc-status-text.idling{color:#966800}
+.pc-summary .pc-status-text.stopped{color:#bb3030}
+.pc-summary .pc-status-text.unknown{color:#64748b}
+@media(max-width:420px){.map-overlay{max-width:calc(100vw - 22px)}.pc-summary{font-size:11px;gap:5px}.pc-summary .pc-speed::before,.pc-summary .pc-odo::before{margin-right:5px}}
+</style></head>
 <body><header class="top"><div class="brand"><h1>Peugeot Connect</h1><span>MyGeotab GO9B</span></div><div class="head-actions"><span id="connection" class="connection">Non collegato</span><button id="refresh" title="Aggiorna dati" aria-label="Aggiorna dati">↻</button><button id="logout" title="Esci" aria-label="Esci">⏻</button></div></header>
 <main>
 <section id="login-panel" class="login-card"><h2>Accesso riservato</h2><p>Accedi con il tuo account autorizzato.</p><form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Accedi</button></form></section>
 <section id="dashboard" class="dashboard" hidden>
 <div id="map" aria-label="Mappa della posizione Geotab"></div>
-<div class="map-overlay"><div id="vehicle-name">Peugeot 2008</div><div class="statusline"><span id="state-dot" class="dot unknown"></span><span id="driving">In attesa</span><span id="speed">—</span></div><small id="gps-time">GPS —</small></div>
+<div class="map-overlay"><div id="vehicle-name">Peugeot 2008</div><span class="pc-gps-label">Ultima posizione GPS</span><time id="gps-time" class="pc-gps-value">—</time><div class="pc-summary"><span class="pc-status"><span id="state-dot" class="dot unknown"></span><span id="driving" class="pc-status-text unknown">Stato non disponibile</span></span><span id="speed" class="pc-speed">— km/h</span><span id="summary-odometer" class="pc-odo">— km</span></div></div>
 <div class="map-controls">
 <button id="center-map" title="Centra veicolo" aria-label="Centra veicolo">◎</button>
 <button id="layers-toggle" title="Livelli mappa" aria-label="Scegli visualizzazione mappa" aria-expanded="false" aria-controls="layers-panel">▱</button>
@@ -35,4 +51,4 @@
 <div id="trips-panel" class="drawer-content" hidden><p class="note">Viaggi registrati da Geotab. Le distanze vengono mostrate come restituite dall'API.</p><div id="trips"></div></div>
 </section>
 </section><p id="message" class="message" role="status" aria-live="polite"></p>
-</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=101"></script></body></html>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=102"></script></body></html>
