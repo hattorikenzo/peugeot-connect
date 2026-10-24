@@ -22,13 +22,23 @@
 .pc-summary .pc-status-text.moving{color:#0b9a5b}.pc-summary .pc-status-text.stopped{color:#c62828}
 .pc-summary .pc-status-text.idling{color:#9d7100}.pc-summary .pc-status-text.unknown{color:#64748b}
 @media(max-width:600px){.map-overlay{width:min(410px,calc(100vw - 22px))!important;max-width:calc(100vw - 22px)!important;padding:12px 13px!important;border-radius:12px!important}.map-overlay #vehicle-name{font-size:15px!important;margin-bottom:10px!important}.pc-gps-label,.pc-gps-value{font-size:12px}.pc-address{font-size:12px}.pc-gps-row,.pc-address-row{gap:8px;margin-bottom:10px}.pc-card-icon{width:19px;height:19px}.pc-summary{gap:5px;font-size:11px;padding-top:9px}.pc-summary .pc-speed,.pc-summary .pc-odo{padding-left:6px;gap:4px}.pc-summary .pc-metric-icon,.pc-summary .pc-status-icon{width:15px;height:15px}}
+/* Su smartphone il pannello si apre toccando il marker dell'auto. */
+.pc-card-close{display:none;position:absolute;right:10px;top:9px;border:0;background:#eaf0f7;color:#173452;border-radius:50%;width:30px;height:30px;font-size:21px;line-height:1;cursor:pointer;align-items:center;justify-content:center;z-index:3}
+@media(max-width:767px){
+ .map-overlay{position:absolute!important;z-index:10!important;max-height:min(65vh,480px)!important;overflow-y:auto!important;padding-top:40px!important}
+ .map-overlay[hidden]{display:none!important}
+ .pc-card-close{display:flex}
+ .pc-google-marker{cursor:pointer}
+}
+@media(min-width:768px){.map-overlay[hidden]{display:block!important}}
 </style></head>
 <body><header class="top"><div class="brand"><h1>Peugeot Connect</h1><span>MyGeotab GO9B</span></div><div class="head-actions"><span id="connection" class="connection">Non collegato</span><button id="refresh" title="Aggiorna dati" aria-label="Aggiorna dati">↻</button><button id="logout" title="Esci" aria-label="Esci">⏻</button></div></header>
 <main>
 <section id="login-panel" class="login-card"><h2>Accesso riservato</h2><p>Accedi con il tuo account autorizzato.</p><form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Accedi</button></form></section>
 <section id="dashboard" class="dashboard" hidden>
 <div id="map" aria-label="Mappa della posizione Geotab"></div>
-<div class="map-overlay" aria-label="Ultima posizione e stato del veicolo">
+<div class="map-overlay" id="vehicle-card" aria-label="Ultima posizione e stato del veicolo">
+ <button type="button" id="close-vehicle-card" class="pc-card-close" aria-label="Chiudi scheda veicolo" title="Chiudi">×</button>
  <div id="vehicle-name">Peugeot 2008</div>
  <div class="pc-gps-row">
   <svg class="pc-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></svg>
@@ -74,4 +84,4 @@
 <div id="trips-panel" class="drawer-content" hidden><p class="note">Viaggi registrati da Geotab. Le distanze vengono mostrate come restituite dall'API.</p><div id="trips"></div></div>
 </section>
 </section><p id="message" class="message" role="status" aria-live="polite"></p>
-</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=105"></script></body></html>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=106"></script></body></html>
