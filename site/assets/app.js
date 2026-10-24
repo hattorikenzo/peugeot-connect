@@ -1,264 +1,38 @@
-(() => {
-'use strict';
-const $=id=>document.getElementById(id);
-const cfg=window.PEUGEOT_CONFIG;
-const fmt=v=>v?new Date(v).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
-const safe=v=>String(v??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const fresh=(time,minutes=5)=>!!time&&Date.now()-new Date(time).getTime()>=0&&Date.now()-new Date(time).getTime()<=minutes*60000;
-if(!cfg||!cfg.supabaseUrl||!cfg.supabasePublishableKey||cfg.supabaseUrl.includes('YOUR-')||!window.supabase){
-  $('message').textContent='Configurazione Supabase mancante o libreria non disponibile.';return;
-}
-const client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishableKey);
-let mapMode="standard";
-let map,marker,position=null,lastGpsTime=null,animation=null,refreshTimer=null,loading=false,signedIn=false,driving=false,latestData=null;
-let lastBearing=0,lastDisplayedState=null;
-const MAP_ID='11f4b4da482f19786959ddf7';
-const MAP_TYPES={standard:'roadmap',terrain:'terrain',satellite:'satellite',hybrid:'hybrid'};
-let googleMapsPromise=null;
-function loadGoogleMaps(){
- if(window.google?.maps?.Map&&window.google?.maps?.marker?.AdvancedMarkerElement)return Promise.resolve();
- if(googleMapsPromise)return googleMapsPromise;
- googleMapsPromise=new Promise((resolve,reject)=>{
-  const key=cfg.googleMapsApiKey;
-  if(!key||key.includes('INSERISCI')){reject(Error('Inserisci googleMapsApiKey in config.js'));return}
-  const cb='__peugeotGoogleMapsReady';
-  const script=document.createElement('script');
-  const timeout=setTimeout(()=>{cleanup();reject(Error('Timeout caricamento Google Maps'))},15000);
-  function cleanup(){clearTimeout(timeout);delete window[cb]}
-  window[cb]=()=>{cleanup();resolve()};
-  script.onerror=()=>{cleanup();reject(Error('Impossibile caricare Google Maps. Controlla chiave API e dominio autorizzato.'))};
-  script.src='https://maps.googleapis.com/maps/api/js?key='+encodeURIComponent(key)+'&v=weekly&libraries=marker&loading=async&callback='+cb;
-  script.async=true;document.head.appendChild(script);
- }).catch(e=>{googleMapsPromise=null;throw e});
- return googleMapsPromise;
-}
-function vehicleMarkerElement(){
- const outer=document.createElement('div');
- outer.className='pc-google-marker';
- outer.style.cssText='width:60px;height:60px;border-radius:50%;border:3px solid white;box-shadow:0 2px 12px #0007;display:grid;place-items:center;background:#808995;position:relative;transform:translateY(-14px)';
- outer.innerHTML='<div class="pc-suv-rotate" style="width:33px;height:48px;transform-origin:center;will-change:transform"><svg viewBox="0 0 40 64" width="33" height="48" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="12" width="6" height="13" rx="2" fill="#1e293b"/><rect x="33" y="12" width="6" height="13" rx="2" fill="#1e293b"/><rect x="1" y="40" width="6" height="13" rx="2" fill="#1e293b"/><rect x="33" y="40" width="6" height="13" rx="2" fill="#1e293b"/><path d="M13 2Q20 0 27 2L33 12V51Q32 61 20 63Q8 61 7 51V12Z" fill="#f7fafc" stroke="#293748" stroke-width="1.5"/><path d="M10 18H30L28 26H12Z" fill="#6e9ab5" stroke="#334155"/><rect x="12" y="28" width="16" height="16" rx="3" fill="#394b5d"/><path d="M11 46H29L30 54H10Z" fill="#83abc3" stroke="#334155"/><path d="M9 8L13 7M27 7L31 8" stroke="#fff0ad" stroke-width="3"/><path d="M9 56L14 59M26 59L31 56" stroke="#ed5555" stroke-width="3"/></svg></div>';
- return outer;
-}
-function setState(state,bearing){
- $('state-dot').className='dot '+state;
- if(!marker)return;
- const colors={moving:'#06c93c',idling:'#ffbf00',stopped:'#f33535',unknown:'#808995'};
- const el=marker.content;
- if(el)el.style.background=colors[state]||colors.unknown;
- const n=Number(bearing);
- if(Number.isFinite(n)&&bearing!==null&&bearing!==undefined&&state==='moving')lastBearing=((n%360)+360)%360;
- const rot=el?.querySelector('.pc-suv-rotate');
- if(rot)rot.style.transform='rotate('+lastBearing+'deg)';
-}
-function cancelAnimation(){if(animation!==null)cancelAnimationFrame(animation);animation=null}
-function moveMarker(lat,lon){
- cancelAnimation();
- const start=marker.position;
- if(!start){marker.position={lat,lng:lon};return}
- const a=typeof start.lat==='function'?start.lat():Number(start.lat);
- const b=typeof start.lng==='function'?start.lng():Number(start.lng);
- if(!Number.isFinite(a)||!Number.isFinite(b)){marker.position={lat,lng:lon};return}
- const begin=performance.now(),duration=1600;
- const tick=now=>{
-  const t=Math.min(1,(now-begin)/duration),e=t*t*(3-2*t);
-  marker.position={lat:a+(lat-a)*e,lng:b+(lon-b)*e};
-  if(t<1)animation=requestAnimationFrame(tick);else animation=null;
- };
- animation=requestAnimationFrame(tick);
-}
-function resizeMap(){
- // Google Maps gestisce automaticamente il ridimensionamento del contenitore.
-}
-function selectMapMode(mode){
- if(!MAP_TYPES[mode])return;
- mapMode=mode;if(map)map.setMapTypeId(MAP_TYPES[mode]);
- document.querySelectorAll('input[name="map-style"]').forEach(el=>el.checked=el.value===mode);
- $('map-layer-info').textContent='';
-}
-async function drawMap(status,state){
- const lat=Number(status.latitude),lon=Number(status.longitude);
- if(!Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180)return;
- await loadGoogleMaps();
- if(!map){
-  map=new google.maps.Map($('map'),{
-   center:{lat,lng:lon},zoom:16,mapId:MAP_ID,mapTypeId:MAP_TYPES[mapMode],
-   disableDefaultUI:true,zoomControl:true,zoomControlOptions:{position:google.maps.ControlPosition.RIGHT_BOTTOM},
-   gestureHandling:'greedy',tilt:0,heading:0
-  });
-  marker=new google.maps.marker.AdvancedMarkerElement({
-   map,position:{lat,lng:lon},content:vehicleMarkerElement(),title:'Ultima posizione Geotab Peugeot 2008'
-  });
- }else{
-  const changed=!position||position.lat!==lat||position.lon!==lon;
-  const newer=status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime));
-  if(changed&&newer&&state==='moving')moveMarker(lat,lon);
-  else if(changed){cancelAnimation();marker.position={lat,lng:lon}}
-  if(changed)map.panTo({lat,lng:lon});
- }
- position={lat,lon};
- if(status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime)))lastGpsTime=status.dateTime;
- setState(state,status.bearing);
-}
-function showPanel(panel){
- const open=panel!=='map';$('drawer').hidden=!open;
- $('asset-panel').hidden=panel!=='asset';$('trips-panel').hidden=panel!=='trips';
- $('drawer-title').textContent=panel==='trips'?'Percorsi':'Asset';
- document.querySelectorAll('.nav-button').forEach(b=>{
-  const active=b.dataset.panel===panel;b.classList.toggle('active',active);
-  if(active)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current');
- });
- if(map)setTimeout(resizeMap,80);
-}
-function toggle(logged){
- signedIn=logged;$('login-panel').hidden=logged;$('dashboard').hidden=!logged;
- $('logout').hidden=!logged;$('refresh').hidden=!logged;
- if(!logged){clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;showPanel('map');}
- $('connection').textContent=logged?'Collegato':'Non collegato';
-}
-function text(id,value){$(id).textContent=value}
-function showMeasurement(id,timeId,reading,format){
- text(id,reading&&Number.isFinite(reading.value)?format(reading.value):'—');
- text(timeId,reading?.dateTime?'Rilevato: '+fmt(reading.dateTime)+(fresh(reading.dateTime,60)?'':' · Storico'):'Nessun dato');
-}
-function colored(id,label,level){
- $(id).className='signal-'+level;$(id).textContent=label;
-}
-// Lo stato deriva sempre dall'ora del campione Geotab, non dall'ora della richiesta HTTP.
-function vehicleState(data){
- const d=data?.status||{},a=data?.assetDiagnostics||{};
- const t=Date.parse(d.dateTime),age=Number.isFinite(t)?Math.max(0,Date.now()-t):Infinity;
- const gpsFresh=Number.isFinite(t)&&t<=Date.now()+60000&&age<=300000;
- const speed=d.speed===null||d.speed===undefined?NaN:Number(d.speed);
- const moving=gpsFresh&&d.isDriving===true&&Number.isFinite(speed)&&speed>0;
- const valid=r=>r&&r.value!==null&&r.value!==undefined&&fresh(r.dateTime,5)&&Number.isFinite(Number(r.value));
- const rpm=valid(a.engineSpeed)?Number(a.engineSpeed.value):null;
- const ignition=valid(a.ignition)?Number(a.ignition.value):null;
- const active=valid(a.engineActive)?Number(a.engineActive.value):null;
- const engineOn=rpm!==null?rpm>0:ignition!==null?ignition===1:active!==null?active===1:null;
- const stopped=gpsFresh&&d.isDriving===false&&Number.isFinite(speed)&&speed===0;
- const state=!gpsFresh?'unknown':moving?'moving':stopped&&engineOn===true?'idling':stopped&&engineOn===false?'stopped':'unknown';
- const label={moving:'In movimento',idling:'Motore acceso · in sosta',stopped:engineOn===false?'Parcheggiata':'Ferma · motore da verificare',unknown:gpsFresh?'Stato non disponibile':'Posizione GPS non aggiornata'}[state];
- return {state,label,age,gpsFresh,speed};
-}
-function elapsedLabel(ms){
- if(!Number.isFinite(ms))return 'ora sconosciuta';
- const seconds=Math.floor(ms/1000);
- if(seconds<60)return 'meno di 1 minuto fa';
- const minutes=Math.floor(seconds/60);
- if(minutes<60)return `${minutes} min fa`;
- const hours=Math.floor(minutes/60);
- if(hours<24)return `${hours} h ${minutes%60} min fa`;
- return `${Math.floor(hours/24)} giorni fa`;
-}
-function updateVehicleStatus(data){
- if(!data)return;
- const d=data.status||{},v=vehicleState(data);
- driving=v.state==='moving';
- text('driving',v.label);
- text('speed',v.gpsFresh&&Number.isFinite(v.speed)?Math.round(v.speed)+' km/h':'— km/h');
- text('gps-time','Ultimo GPS: '+fmt(d.dateTime)+' · '+elapsedLabel(v.age)+(v.gpsFresh?'':' · storico'));
- $('gps-time').classList.toggle('gps-stale',!v.gpsFresh);
- $('state-dot').className='dot '+v.state;
- if(marker){setState(v.state,d.bearing);}
- lastDisplayedState=v.state;
-}
-// Aggiorna l'eta del dato anche tra due interrogazioni Geotab.
-setInterval(()=>{if(signedIn&&latestData)updateVehicleStatus(latestData)},15000);
-function render(data){
- latestData=data;const d=data.status||{},m=data.measurements||{},a=data.assetDiagnostics||{};
- text('vehicle-name',data.vehicle?.name||'Peugeot 2008');
- text('updated','Aggiornato: '+fmt(data.fetchedAt));
- updateVehicleStatus(data);
- const speed=d.speed===null||d.speed===undefined?NaN:Number(d.speed);
- const validEngine=r=>r&&r.value!==null&&r.value!==undefined&&fresh(r.dateTime,5)&&Number.isFinite(Number(r.value));
- const rpm=validEngine(a.engineSpeed)?Number(a.engineSpeed.value):null;
- const ignition=validEngine(a.ignition)?Number(a.ignition.value):null;
- const active=validEngine(a.engineActive)?Number(a.engineActive.value):null;
- const engineOn=rpm!==null?rpm>0:ignition!==null?ignition===1:active!==null?active===1:null;
- const state=vehicleState(data).state;
- text('asset-speed',Number.isFinite(speed)?Math.round(speed)+' km/h':'—');text('asset-speed-time',fmt(d.dateTime));
- text('communicating',d.isDeviceCommunicating===true?'Connesso':d.isDeviceCommunicating===false?'Non comunica':'—');
- text('comm-time','GPS: '+fmt(d.dateTime));
- text('engine',engineOn===true?'Acceso':engineOn===false?'Spento':'Non disponibile');
- text('engine-time',a.engineSpeed?.dateTime?'Giri: '+a.engineSpeed.value+' rpm · '+fmt(a.engineSpeed.dateTime):'Ultima lettura non disponibile');
- showMeasurement('fuel','fuel-time',m.fuel,v=>Math.round(v)+' %');
- showMeasurement('battery','battery-time',m.battery,v=>v.toFixed(2)+' V');
- // Geotab DiagnosticOdometerId reports metres. Reject obviously invalid readings.
- showMeasurement('odometer','odometer-time',a.odometer,v=>v>=0?(v/1000).toLocaleString('it-IT',{maximumFractionDigits:1})+' km':'—');
- const sats=a.trackedSatellites||a.gpsSatellites;
- if(sats&&fresh(sats.dateTime,15)&&Number.isFinite(sats.value)){
-  const n=Math.round(sats.value);colored('satellites',n+' satelliti',n>=7?'green':n>=4?'orange':'red');
- }else colored('satellites','Non disponibile','unknown');
- text('satellites-time',sats?.dateTime?'Rilevato: '+fmt(sats.dateTime):'Nessun dato');
- const cell=a.cellularSignal;
- if(cell&&fresh(cell.dateTime,15)&&Number.isFinite(cell.value)){
-  const v=cell.value;
-  // Tentative scale interpretation; keep raw value visible.
-  // Some modems use dBm, others 0..5 or other scales.
-  let level='unknown';
-  if(v>=0&&v<=5)level=v>=4?'green':v>=2?'orange':'red';
-  else if(v>=-120&&v<=-30)level=v>=-85?'green':v>=-105?'orange':'red';
-  colored('cellular',String(v)+' · '+(level==='unknown'?'scala sconosciuta':'qualità indicativa'),level);
- }else colored('cellular','Non disponibile','unknown');
- text('cellular-time',cell?.dateTime?'Rilevato: '+fmt(cell.dateTime)+' · scala da verificare':'Nessun dato');
- const access=Array.isArray(data.accessDiagnostics)?data.accessDiagnostics:[];
- const names={driver:'Conducente',passenger:'Passeggero',rearRight:'Posteriore destra',rearLeft:'Posteriore sinistra',cargoHatchCandidate:'Portellone (da confermare)'};
- $('access-signals').innerHTML=access.length?access.map(x=>`<div class="access-card"><b>${safe(names[x.key]||x.description)}</b><span>${x.latestValue===0?'0 · probabile chiusura':x.latestValue===1?'1 · probabile apertura':'Nessuna lettura'}</span><small>${safe(fmt(x.latestDateTime))} · ${safe(x.sampleCount)} campioni</small></div>`).join(''):'<p>Diagnostiche non disponibili.</p>';
- const trips=Array.isArray(data.trips)?data.trips:[];
- $('trips').innerHTML=trips.length?trips.map(t=>`<article class="trip-item"><b>${safe(fmt(t.start||t.dateTime))} → ${safe(fmt(t.stop))}</b><small>${Number.isFinite(t.distance)?(t.distance/1000).toFixed(1)+' km':'Distanza non disponibile'} · Durata: ${safe(t.drivingDuration||'—')}</small></article>`).join(''):'<p>Nessun viaggio disponibile.</p>';
- return drawMap(d,state).then(()=>{lastDisplayedState=state});
-}
-function schedule(){
- clearTimeout(refreshTimer);
- if(!signedIn)return;
- refreshTimer=setTimeout(()=>{if(document.visibilityState==='visible')load();else schedule()},driving?2000:30000);
-}
-async function load(){
- if(loading||!signedIn)return;loading=true;clearTimeout(refreshTimer);
- $('refresh').disabled=true;text('message','');
- try{
-  const {data,error}=await client.functions.invoke('peugeot-api',{body:{action:'dashboard'}});
-  if(error){let msg=error.message;try{msg=(await error.context?.json())?.error||msg}catch{}throw Error(msg)}
-  if(data?.error)throw Error(data.error);
-  // Wait for the dashboard to be painted before Google Maps initializes.
-  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  try{await render(data);text('connection','Dati aggiornati');}
-  catch(mapError){text('message','Dati caricati, ma mappa non disponibile: '+(mapError.message||String(mapError)));text('connection','Dati aggiornati');}
- }catch(e){text('message',e.message||String(e));text('connection','Errore dati')}
- finally{loading=false;$('refresh').disabled=false;schedule()}
-}
-$('login-form').addEventListener('submit',async e=>{
- e.preventDefault();text('message','');
- const {error}=await client.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
- $('password').value='';if(error){text('message',error.message);return}
- toggle(true);await load();
-});
-$('logout').addEventListener('click',async()=>{await client.auth.signOut();toggle(false)});
-$('refresh').addEventListener('click',load);
-$('layers-toggle').addEventListener('click',()=>{
- const panel=$('layers-panel');panel.hidden=!panel.hidden;
- $('layers-toggle').setAttribute('aria-expanded',String(!panel.hidden));
-});
-document.querySelectorAll('input[name="map-style"]').forEach(input=>input.addEventListener('change',()=>{
- if(input.checked){selectMapMode(input.value);$('layers-panel').hidden=true;$('layers-toggle').setAttribute('aria-expanded','false');}
-}));
-$('center-map').addEventListener('click',()=>{if(map&&position)map.panTo({lat:position.lat,lng:position.lon})});
-document.querySelectorAll('.nav-button').forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
-$('close-drawer').addEventListener('click',()=>showPanel('map'));
-$('lookup-address').addEventListener('click',async()=>{
- if(!position){text('address','Posizione non disponibile');return}
- $('lookup-address').disabled=true;text('address','Ricerca indirizzo…');
- try{
-  // Only after user click; sends coordinates to Nominatim.
-  const u=new URL('https://nominatim.openstreetmap.org/reverse');
-  u.search=new URLSearchParams({lat:String(position.lat),lon:String(position.lon),format:'jsonv2',zoom:'18','accept-language':'it'});
-  const r=await fetch(u,{headers:{Accept:'application/json'}});
-  if(!r.ok)throw Error('Geocodifica non disponibile');
-  const d=await r.json();text('address',d.display_name||'Indirizzo non disponibile');
- }catch{text('address','Indirizzo non disponibile')}
- finally{$('lookup-address').disabled=false}
-});
-window.addEventListener('resize',resizeMap);
-document.addEventListener('visibilitychange',()=>{if(signedIn&&document.visibilityState==='visible'){resizeMap();load()}});
-client.auth.getSession().then(async({data})=>{toggle(!!data.session);if(data.session)await load()}).catch(e=>text('message',e.message));
-})();
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="assets/style.css?v=100"></head>
+<body><header class="top"><div class="brand"><h1>Peugeot Connect</h1><span>MyGeotab GO9B</span></div><div class="head-actions"><span id="connection" class="connection">Non collegato</span><button id="refresh" title="Aggiorna dati" aria-label="Aggiorna dati">↻</button><button id="logout" title="Esci" aria-label="Esci">⏻</button></div></header>
+<main>
+<section id="login-panel" class="login-card"><h2>Accesso riservato</h2><p>Accedi con il tuo account autorizzato.</p><form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Accedi</button></form></section>
+<section id="dashboard" class="dashboard" hidden>
+<div id="map" aria-label="Mappa della posizione Geotab"></div>
+<div class="map-overlay"><div id="vehicle-name">Peugeot 2008</div><div class="statusline"><span id="state-dot" class="dot unknown"></span><span id="driving">In attesa</span><span id="speed">—</span></div><small id="gps-time">GPS —</small></div>
+<div class="map-controls">
+<button id="center-map" title="Centra veicolo" aria-label="Centra veicolo">◎</button>
+<button id="layers-toggle" title="Livelli mappa" aria-label="Scegli visualizzazione mappa" aria-expanded="false" aria-controls="layers-panel">▱</button>
+<div id="layers-panel" class="layers-panel" hidden>
+  <strong>Visualizzazione</strong>
+  <label><input type="radio" name="map-style" value="standard" checked> Standard</label>
+  <label><input type="radio" name="map-style" value="terrain"> Rilievo</label>
+  <label><input type="radio" name="map-style" value="satellite"> Satellite</label>
+  <label><input type="radio" name="map-style" value="hybrid"> Ibrida</label>
+  <hr><label class="disabled-option"><input type="checkbox" disabled> Traffico <small>non disponibile senza un servizio dedicato</small></label>
+  <small id="map-layer-info" role="status"></small>
+</div></div>
+<nav class="bottom-nav" aria-label="Sezioni"><button class="nav-button active" data-panel="map" aria-current="page"><span>⌖</span>Mappa</button><button class="nav-button" data-panel="asset"><span>▤</span>Asset</button><button class="nav-button" data-panel="trips"><span>⇢</span>Percorsi</button></nav>
+<section id="drawer" class="drawer" hidden aria-label="Dettagli veicolo"><div class="drawer-grip"></div><div class="drawer-head"><h2 id="drawer-title">Asset</h2><button id="close-drawer" aria-label="Chiudi pannello">✕</button></div>
+<div id="asset-panel" class="drawer-content">
+<div class="asset-grid">
+<div class="asset-tile"><span>Chilometri</span><strong id="odometer">—</strong><small id="odometer-time"></small></div>
+<div class="asset-tile"><span>Carburante</span><strong id="fuel">—</strong><small id="fuel-time"></small></div>
+<div class="asset-tile"><span>Velocità</span><strong id="asset-speed">—</strong><small id="asset-speed-time"></small></div>
+<div class="asset-tile"><span>Comunicazione GO9B</span><strong id="communicating">—</strong><small id="comm-time"></small></div>
+<div class="asset-tile"><span>🛰 Satelliti GPS</span><strong id="satellites">—</strong><small id="satellites-time"></small></div>
+<div class="asset-tile"><span>▂▄▆ Segnale cellulare</span><strong id="cellular">—</strong><small id="cellular-time"></small></div>
+<div class="asset-tile"><span>Alimentazione GO9B</span><strong id="battery">—</strong><small id="battery-time"></small></div>
+<div class="asset-tile"><span>Motore</span><strong id="engine">—</strong><small id="engine-time"></small></div>
+</div><h3>Porte e portellone</h3><p class="note">Ultimi valori disponibili, non necessariamente in tempo reale. Portellone ancora da confermare.</p><div id="access-signals" class="access-grid"></div>
+<div class="detail-foot"><span id="updated"></span><span id="address">Indirizzo non richiesto</span><button id="lookup-address" type="button">Mostra indirizzo</button></div>
+</div>
+<div id="trips-panel" class="drawer-content" hidden><p class="note">Viaggi registrati da Geotab. Le distanze vengono mostrate come restituite dall'API.</p><div id="trips"></div></div>
+</section>
+</section><p id="message" class="message" role="status" aria-live="polite"></p>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=101"></script></body></html>
