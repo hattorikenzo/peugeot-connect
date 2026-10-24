@@ -48,6 +48,19 @@ async function geocodePosition(status,force=false){
  })();
  await geocodePending;
 }
+// Scheda sempre aperta su PC; sul telefono si apre toccando il marker.
+const mobileCardQuery=window.matchMedia('(max-width: 767px)');
+let mobileCardOpen=false;
+function syncVehicleCard(){
+ const card=$('vehicle-card');
+ if(!card)return;
+ card.hidden=mobileCardQuery.matches&&!mobileCardOpen;
+}
+function openVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=true;syncVehicleCard();}}
+function closeVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=false;syncVehicleCard();}}
+mobileCardQuery.addEventListener?.('change',syncVehicleCard);
+$('close-vehicle-card').addEventListener('click',closeVehicleCard);
+syncVehicleCard();
 const MAP_ID='11f4b4da482f19786959ddf7';
 const MAP_TYPES={standard:'roadmap',terrain:'terrain',satellite:'satellite',hybrid:'hybrid'};
 let googleMapsPromise=null;
@@ -124,6 +137,7 @@ async function drawMap(status,state){
   marker=new google.maps.marker.AdvancedMarkerElement({
    map,position:{lat,lng:lon},content:vehicleMarkerElement(),title:'Ultima posizione Geotab Peugeot 2008'
   });
+  marker.addListener('click',openVehicleCard);
  }else{
   const changed=!position||position.lat!==lat||position.lon!==lon;
   const newer=status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime));
