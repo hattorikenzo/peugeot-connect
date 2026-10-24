@@ -56,7 +56,7 @@ function syncVehicleCard(){
  if(!card)return;
  card.hidden=mobileCardQuery.matches&&!mobileCardOpen;
 }
-function openVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=true;syncVehicleCard();}}
+function toggleVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=!mobileCardOpen;syncVehicleCard();}}
 function closeVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=false;syncVehicleCard();}}
 mobileCardQuery.addEventListener?.('change',syncVehicleCard);
 $('close-vehicle-card').addEventListener('click',closeVehicleCard);
@@ -137,7 +137,7 @@ async function drawMap(status,state){
   marker=new google.maps.marker.AdvancedMarkerElement({
    map,position:{lat,lng:lon},content:vehicleMarkerElement(),title:'Ultima posizione Geotab Peugeot 2008'
   });
-  marker.addListener('click',openVehicleCard);
+  marker.addListener('click',toggleVehicleCard);
  }else{
   const changed=!position||position.lat!==lat||position.lon!==lon;
   const newer=status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime));
