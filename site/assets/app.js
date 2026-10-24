@@ -12,6 +12,42 @@ const client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishabl
 let mapMode="standard";
 let map,marker,position=null,lastGpsTime=null,animation=null,refreshTimer=null,loading=false,signedIn=false,driving=false,latestData=null;
 let lastBearing=0,lastDisplayedState=null;
+let lastKnownStatus=null,lastKnownOdometer=null;
+let geocodeKey='',geocodePending=null,lastGeocodeAt=0;
+const addressCache=new Map();
+const gpsCoordinates=s=>{const lat=Number(s?.latitude),lon=Number(s?.longitude);return s&&s.latitude!=null&&s.longitude!=null&&Number.isFinite(lat)&&Number.isFinite(lon)&&Math.abs(lat)<=90&&Math.abs(lon)<=180?{lat,lon}:null};
+function rememberGps(status){
+ if(!gpsCoordinates(status))return lastKnownStatus;
+ const incoming=Date.parse(status.dateTime),previous=Date.parse(lastKnownStatus?.dateTime);
+ if(!lastKnownStatus||(Number.isFinite(incoming)&&(!Number.isFinite(previous)||incoming>=previous)))lastKnownStatus=status;
+ return lastKnownStatus;
+}
+function setAddress(value){text('map-address',value);text('address',value)}
+async function geocodePosition(status,force=false){
+ const coords=gpsCoordinates(status);if(!coords)return;
+ const key=coords.lat.toFixed(5)+','+coords.lon.toFixed(5);
+ if(addressCache.has(key)){geocodeKey=key;setAddress(addressCache.get(key));return}
+ if(!force&&geocodeKey===key)return;
+ if(geocodePending)return;
+ geocodeKey=key;
+ const elapsed=Date.now()-lastGeocodeAt;
+ if(elapsed<1100){geocodeKey='';return}
+ lastGeocodeAt=Date.now();
+ setAddress('Ricerca indirizzo…');
+ geocodePending=(async()=>{
+  try{
+   const u=new URL('https://nominatim.openstreetmap.org/reverse');
+   u.search=new URLSearchParams({lat:String(coords.lat),lon:String(coords.lon),format:'jsonv2',zoom:'18','accept-language':'it'});
+   const r=await fetch(u,{headers:{Accept:'application/json'}});
+   if(!r.ok)throw Error('Geocodifica non disponibile');
+   const d=await r.json();const value=d.display_name||'Indirizzo non disponibile';
+   addressCache.set(key,value);
+   if(geocodeKey===key)setAddress(value);
+  }catch{if(geocodeKey===key)setAddress('Indirizzo non disponibile')}
+  finally{geocodePending=null}
+ })();
+ await geocodePending;
+}
 const MAP_ID='11f4b4da482f19786959ddf7';
 const MAP_TYPES={standard:'roadmap',terrain:'terrain',satellite:'satellite',hybrid:'hybrid'};
 let googleMapsPromise=null;
@@ -135,9 +171,9 @@ function vehicleState(data){
  const ignition=valid(a.ignition)?Number(a.ignition.value):null;
  const active=valid(a.engineActive)?Number(a.engineActive.value):null;
  const engineOn=rpm!==null?rpm>0:ignition!==null?ignition===1:active!==null?active===1:null;
- const stopped=gpsFresh&&d.isDriving===false&&Number.isFinite(speed)&&speed===0;
- const state=!gpsFresh?'unknown':moving?'moving':stopped&&engineOn===true?'idling':stopped&&engineOn===false?'stopped':'unknown';
- const label={moving:'In movimento',idling:'Motore acceso · in sosta',stopped:engineOn===false?'Parcheggiata':'Ferma · motore da verificare',unknown:gpsFresh?'Stato non disponibile':'Posizione GPS non aggiornata'}[state];
+ const stopped=Number.isFinite(speed)&&speed===0&&d.isDriving!==true;
+ const state=moving?'moving':stopped&&gpsFresh&&engineOn===true?'idling':stopped?'stopped':'unknown';
+ const label=moving?'In movimento':stopped?(gpsFresh?(engineOn===true?'Motore acceso · fermo':'Fermo'):'Fermo · ultima rilevazione'):'Stato non disponibile';
  return {state,label,age,gpsFresh,speed};
 }
 function elapsedLabel(ms){
@@ -155,8 +191,12 @@ function updateVehicleStatus(data){
  const d=data.status||{},v=vehicleState(data);
  driving=v.state==='moving';
  text('driving',v.label);
- text('speed',v.gpsFresh&&Number.isFinite(v.speed)?Math.round(v.speed)+' km/h':'— km/h');
- text('gps-time','Ultimo GPS: '+fmt(d.dateTime)+' · '+elapsedLabel(v.age)+(v.gpsFresh?'':' · storico'));
+  $('driving').className='pc-status-text '+v.state;
+ const stateIcon=$('status-icon');if(stateIcon)stateIcon.setAttribute('class','pc-status-icon '+v.state);
+ text('speed',Number.isFinite(v.speed)?Math.round(v.speed)+' km/h':'— km/h');
+ text('gps-time','Aggiornato: '+fmt(d.dateTime));
+  $('gps-time').dateTime=d.dateTime||'';
+  $('gps-time').title=v.gpsFresh?'Posizione recente':'Ultima posizione registrata (dato non recente)';
  $('gps-time').classList.toggle('gps-stale',!v.gpsFresh);
  $('state-dot').className='dot '+v.state;
  if(marker){setState(v.state,d.bearing);}
@@ -165,17 +205,27 @@ function updateVehicleStatus(data){
 // Aggiorna l'eta del dato anche tra due interrogazioni Geotab.
 setInterval(()=>{if(signedIn&&latestData)updateVehicleStatus(latestData)},15000);
 function render(data){
- latestData=data;const d=data.status||{},m=data.measurements||{},a=data.assetDiagnostics||{};
+ const accepted=rememberGps(data.status);
+ const d=accepted||data.status||{};
+ const m=data.measurements||{},a=data.assetDiagnostics||{};
+ const odometerCandidate=a.odometer;
+ if(odometerCandidate?.value!=null&&Number.isFinite(Number(odometerCandidate.value))&&Number(odometerCandidate.value)>=0){
+  const incoming=Date.parse(odometerCandidate.dateTime),previous=Date.parse(lastKnownOdometer?.dateTime);
+  if(!lastKnownOdometer||Number.isFinite(incoming)&&(!Number.isFinite(previous)||incoming>=previous))lastKnownOdometer=odometerCandidate;
+ }
+ const merged={...data,status:d,assetDiagnostics:{...a,odometer:lastKnownOdometer||a.odometer}};
+ latestData=merged;
  text('vehicle-name',data.vehicle?.name||'Peugeot 2008');
  text('updated','Aggiornato: '+fmt(data.fetchedAt));
- updateVehicleStatus(data);
+ updateVehicleStatus(merged);
+ if(gpsCoordinates(d))void geocodePosition(d);
  const speed=d.speed===null||d.speed===undefined?NaN:Number(d.speed);
  const validEngine=r=>r&&r.value!==null&&r.value!==undefined&&fresh(r.dateTime,5)&&Number.isFinite(Number(r.value));
  const rpm=validEngine(a.engineSpeed)?Number(a.engineSpeed.value):null;
  const ignition=validEngine(a.ignition)?Number(a.ignition.value):null;
  const active=validEngine(a.engineActive)?Number(a.engineActive.value):null;
  const engineOn=rpm!==null?rpm>0:ignition!==null?ignition===1:active!==null?active===1:null;
- const state=vehicleState(data).state;
+ const state=vehicleState(merged).state;
  text('asset-speed',Number.isFinite(speed)?Math.round(speed)+' km/h':'—');text('asset-speed-time',fmt(d.dateTime));
  text('communicating',d.isDeviceCommunicating===true?'Connesso':d.isDeviceCommunicating===false?'Non comunica':'—');
  text('comm-time','GPS: '+fmt(d.dateTime));
@@ -184,7 +234,10 @@ function render(data){
  showMeasurement('fuel','fuel-time',m.fuel,v=>Math.round(v)+' %');
  showMeasurement('battery','battery-time',m.battery,v=>v.toFixed(2)+' V');
  // Geotab DiagnosticOdometerId reports metres. Reject obviously invalid readings.
- showMeasurement('odometer','odometer-time',a.odometer,v=>v>=0?(v/1000).toLocaleString('it-IT',{maximumFractionDigits:1})+' km':'—');
+ showMeasurement('odometer','odometer-time',merged.assetDiagnostics.odometer,v=>v>=0?(v/1000).toLocaleString('it-IT',{maximumFractionDigits:1})+' km':'—');
+  const odo=Number(merged.assetDiagnostics.odometer?.value);
+  text('summary-odometer',merged.assetDiagnostics.odometer&&merged.assetDiagnostics.odometer.value!==null&&merged.assetDiagnostics.odometer.value!==undefined&&Number.isFinite(odo)&&odo>=0?(odo/1000).toLocaleString('it-IT',{maximumFractionDigits:0})+' km':'— km');
+  $('summary-odometer').title=merged.assetDiagnostics.odometer?.dateTime?'Chilometraggio rilevato: '+fmt(merged.assetDiagnostics.odometer.dateTime):'Chilometraggio non disponibile';
  const sats=a.trackedSatellites||a.gpsSatellites;
  if(sats&&fresh(sats.dateTime,15)&&Number.isFinite(sats.value)){
   const n=Math.round(sats.value);colored('satellites',n+' satelliti',n>=7?'green':n>=4?'orange':'red');
@@ -206,7 +259,7 @@ function render(data){
  $('access-signals').innerHTML=access.length?access.map(x=>`<div class="access-card"><b>${safe(names[x.key]||x.description)}</b><span>${x.latestValue===0?'0 · probabile chiusura':x.latestValue===1?'1 · probabile apertura':'Nessuna lettura'}</span><small>${safe(fmt(x.latestDateTime))} · ${safe(x.sampleCount)} campioni</small></div>`).join(''):'<p>Diagnostiche non disponibili.</p>';
  const trips=Array.isArray(data.trips)?data.trips:[];
  $('trips').innerHTML=trips.length?trips.map(t=>`<article class="trip-item"><b>${safe(fmt(t.start||t.dateTime))} → ${safe(fmt(t.stop))}</b><small>${Number.isFinite(t.distance)?(t.distance/1000).toFixed(1)+' km':'Distanza non disponibile'} · Durata: ${safe(t.drivingDuration||'—')}</small></article>`).join(''):'<p>Nessun viaggio disponibile.</p>';
- return drawMap(d,state).then(()=>{lastDisplayedState=state});
+ return (gpsCoordinates(d)?drawMap(d,state):Promise.resolve()).then(()=>{lastDisplayedState=state});
 }
 function schedule(){
  clearTimeout(refreshTimer);
@@ -246,18 +299,12 @@ $('center-map').addEventListener('click',()=>{if(map&&position)map.panTo({lat:po
 document.querySelectorAll('.nav-button').forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
 $('close-drawer').addEventListener('click',()=>showPanel('map'));
 $('lookup-address').addEventListener('click',async()=>{
- if(!position){text('address','Posizione non disponibile');return}
- $('lookup-address').disabled=true;text('address','Ricerca indirizzo…');
- try{
-  // Only after user click; sends coordinates to Nominatim.
-  const u=new URL('https://nominatim.openstreetmap.org/reverse');
-  u.search=new URLSearchParams({lat:String(position.lat),lon:String(position.lon),format:'jsonv2',zoom:'18','accept-language':'it'});
-  const r=await fetch(u,{headers:{Accept:'application/json'}});
-  if(!r.ok)throw Error('Geocodifica non disponibile');
-  const d=await r.json();text('address',d.display_name||'Indirizzo non disponibile');
- }catch{text('address','Indirizzo non disponibile')}
+ if(!position){setAddress('Posizione non disponibile');return}
+ $('lookup-address').disabled=true;
+ try{geocodeKey='';await geocodePosition({latitude:position.lat,longitude:position.lon},true)}
  finally{$('lookup-address').disabled=false}
 });
+
 window.addEventListener('resize',resizeMap);
 document.addEventListener('visibilitychange',()=>{if(signedIn&&document.visibilityState==='visible'){resizeMap();load()}});
 client.auth.getSession().then(async({data})=>{toggle(!!data.session);if(data.session)await load()}).catch(e=>text('message',e.message));
