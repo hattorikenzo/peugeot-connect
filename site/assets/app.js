@@ -12,6 +12,7 @@ const client=window.supabase.createClient(cfg.supabaseUrl,cfg.supabasePublishabl
 let mapMode="standard";
 let map,marker,position=null,lastGpsTime=null,animation=null,refreshTimer=null,loading=false,signedIn=false,driving=false,latestData=null;
 let lastBearing=0,lastDisplayedState=null;
+let consecutiveDataFailures=0, retryDelayMs=0, lastGoodDataAt=0;
 let lastKnownStatus=null,lastKnownOdometer=null;
 let geocodeKey='',geocodePending=null,lastGeocodeAt=0;
 const addressCache=new Map();
@@ -162,7 +163,7 @@ function showPanel(panel){
 function toggle(logged){
  signedIn=logged;$('login-panel').hidden=logged;$('dashboard').hidden=!logged;
  $('logout').hidden=!logged;$('refresh').hidden=!logged;
- if(!logged){clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;showPanel('map');}
+ if(!logged){clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=0;showPanel('map');}
  $('connection').textContent=logged?'Collegato':'Non collegato';
 }
 function text(id,value){$(id).textContent=value}
@@ -300,21 +301,56 @@ function render(data){
 function schedule(){
  clearTimeout(refreshTimer);
  if(!signedIn)return;
- refreshTimer=setTimeout(()=>{if(document.visibilityState==='visible')load();else schedule()},driving?2000:30000);
+ // Keep the original 2 s driving / 30 s parked cadence after successful reads.
+ // A failure uses an increasing delay to avoid API/authentication storms.
+ const delay=retryDelayMs|| (driving?2000:30000);
+ refreshTimer=setTimeout(()=>{if(document.visibilityState==='visible')load();else schedule()},delay);
+}
+function apiFailureInfo(error){
+ const status=Number(error?.context?.status)||0;
+ const message=String(error?.message||'Errore di connessione');
+ const lower=message.toLowerCase();
+ const auth=status===401||status===403||/utente non autorizzato|invalid.*token|jwt.*expired|sessione.*scaduta/i.test(message);
+ const config=/configurazione server incompleta|configurazione supabase mancante/i.test(message);
+ const permanent=auth||config;
+ const rate=status===429||/limite.*api|rate.limit|quota|temporaneamente in attesa/i.test(message);
+ return {status,message,permanent,rate};
 }
 async function load(){
  if(loading||!signedIn)return;loading=true;clearTimeout(refreshTimer);
- $('refresh').disabled=true;text('message','');
+ $('refresh').disabled=true;
  try{
   const {data,error}=await client.functions.invoke('peugeot-api',{body:{action:'dashboard'}});
-  if(error){let msg=error.message;try{msg=(await error.context?.json())?.error||msg}catch{}throw Error(msg)}
+  if(error){
+   let msg=error.message;
+   try{const payload=await error.context?.json();msg=payload?.error||msg}catch{}
+   const ex=Error(msg||'Errore di connessione');ex.context=error.context;throw ex;
+  }
   if(data?.error)throw Error(data.error);
-  // Wait for the dashboard to be painted before Google Maps initializes.
+  // A valid response resets the transient failure counter.
+  consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=Date.now();
+  text('message','');
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  try{await render(data);text('connection','Dati aggiornati');}
+  try{await render(data);text('connection',data?.stale?'Dati disponibili · aggiornamento in attesa':'Dati aggiornati');}
   catch(mapError){text('message','Dati caricati, ma mappa non disponibile: '+(mapError.message||String(mapError)));text('connection','Dati aggiornati');}
- }catch(e){text('message',e.message||String(e));text('connection','Errore dati')}
- finally{loading=false;$('refresh').disabled=false;schedule()}
+ }catch(e){
+  const f=apiFailureInfo(e);
+  consecutiveDataFailures++;
+  retryDelayMs=f.permanent?60000:Math.min(60000,5000*Math.pow(2,Math.min(4,consecutiveDataFailures-1)));
+  if(f.rate)retryDelayMs=Math.max(retryDelayMs,30000);
+  if(f.permanent){
+   text('message',f.message);
+   text('connection','Verifica accesso');
+  }else if(latestData){
+   // Keep the last valid dashboard visible; do not misrepresent it as live.
+   text('connection','Dati precedenti · riconnessione');
+   text('message',consecutiveDataFailures>=3?'Connessione Geotab temporaneamente non disponibile. Ultimi dati ricevuti mantenuti; nuovo tentativo automatico.':'');
+  }else{
+   text('connection','Connessione in attesa');
+   text('message',consecutiveDataFailures>=2?'Dati Geotab temporaneamente non disponibili. Nuovo tentativo automatico.':'');
+  }
+  console.warn('Peugeot Connect: richiesta dati non riuscita', {status:f.status,attempts:consecutiveDataFailures,waitSeconds:Math.ceil(retryDelayMs/1000),reason:f.message});
+ }finally{loading=false;$('refresh').disabled=false;schedule()}
 }
 $('login-form').addEventListener('submit',async e=>{
  e.preventDefault();text('message','');
