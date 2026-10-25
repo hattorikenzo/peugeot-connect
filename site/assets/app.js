@@ -218,6 +218,27 @@ function updateVehicleStatus(data){
 }
 // Aggiorna l'eta del dato anche tra due interrogazioni Geotab.
 setInterval(()=>{if(signedIn&&latestData)updateVehicleStatus(latestData)},15000);
+// Visualizzazione del carburante gia recuperato per il pannello Asset.
+const PC_TANK_LITERS=44;
+const PC_RESERVE_PERCENT=13; // soglia sperimentale, non evento spia OEM
+function updateFuelStrip(measurement){
+ const strip=$('pc-fuel-strip');
+ if(!strip)return;
+ const raw=measurement?.value;
+ const percentage=raw===null||raw===undefined||raw===''?NaN:Number(raw);
+ const valid=Number.isFinite(percentage)&&percentage>=0&&percentage<=100;
+ const reserve=valid&&percentage<=PC_RESERVE_PERCENT;
+ strip.classList.toggle('reserve',reserve);
+ const bars=$('pc-fuel-bars').children;
+ const filled=valid?Math.ceil(percentage/20):0;
+ for(let i=0;i<bars.length;i++)bars[i].classList.toggle('active',i<filled);
+ text('pc-fuel-liters',valid?(percentage*PC_TANK_LITERS/100).toLocaleString('it-IT',{maximumFractionDigits:1})+' L':'— L');
+ text('pc-fuel-percent',valid?percentage.toLocaleString('it-IT',{maximumFractionDigits:1})+' %':'— %');
+ text('pc-fuel-warning-label',reserve?'Riserva':valid?'Normale':'—');
+ $('pc-fuel-warning').title=reserve?'Riserva stimata (soglia sperimentale 13%)':valid?'Livello sopra la soglia sperimentale del 13%':'Stato riserva non disponibile';
+ strip.setAttribute('aria-label',valid?'Carburante '+percentage.toLocaleString('it-IT',{maximumFractionDigits:1})+' per cento, '+(percentage*PC_TANK_LITERS/100).toLocaleString('it-IT',{maximumFractionDigits:1})+' litri teorici; '+(reserve?'riserva stimata':'sopra soglia'):'Carburante residuo non disponibile');
+ strip.title=measurement?.dateTime?'Carburante rilevato: '+fmt(measurement.dateTime):'Carburante non disponibile';
+}
 function render(data){
  const accepted=rememberGps(data.status);
  const d=accepted||data.status||{};
@@ -246,6 +267,7 @@ function render(data){
  text('engine',engineOn===true?'Acceso':engineOn===false?'Spento':'Non disponibile');
  text('engine-time',a.engineSpeed?.dateTime?'Giri: '+a.engineSpeed.value+' rpm · '+fmt(a.engineSpeed.dateTime):'Ultima lettura non disponibile');
  showMeasurement('fuel','fuel-time',m.fuel,v=>Math.round(v)+' %');
+ updateFuelStrip(m.fuel);
  showMeasurement('battery','battery-time',m.battery,v=>v.toFixed(2)+' V');
  // Geotab DiagnosticOdometerId reports metres. Reject obviously invalid readings.
  showMeasurement('odometer','odometer-time',merged.assetDiagnostics.odometer,v=>v>=0?(v/1000).toLocaleString('it-IT',{maximumFractionDigits:1})+' km':'—');
