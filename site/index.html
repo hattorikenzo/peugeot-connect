@@ -1,4 +1,4 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="assets/style.css?v=100"><style>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect</title><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="assets/style.css?v=101"><style>
 /* Peugeot Connect: scheda posizione come anteprima approvata */
 .map-overlay{box-sizing:border-box!important;width:min(570px,calc(100vw - 32px))!important;min-width:0!important;max-width:calc(100vw - 32px)!important;padding:17px 20px 15px!important;border-radius:17px!important;background:rgba(255,255,255,.97)!important;color:#173452!important;box-shadow:0 5px 20px rgba(16,35,58,.22)!important;line-height:1.35!important}
 .map-overlay #vehicle-name{font-size:19px!important;font-weight:800!important;color:#183451!important;margin-bottom:15px!important}
@@ -53,6 +53,11 @@
   <span class="pc-speed"><svg class="pc-metric-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 17a9 9 0 1 1 16 0"/><path d="m12 15 4-6"/><circle cx="12" cy="15" r="1" fill="currentColor"/></svg><span id="speed">— km/h</span></span>
   <span class="pc-odo"><svg class="pc-metric-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 3h8l6 18H2L8 3zm3 3-1 4h4l-1-4h-2zm-1.5 7L8 18h8l-1.5-5h-5z"/></svg><span id="summary-odometer">— km</span></span>
  </div>
+ <div class="pc-fuel-strip" id="pc-fuel-strip" aria-label="Carburante residuo non disponibile">
+  <div class="pc-fuel-info"><span class="pc-fuel-label">Carburante residuo</span><div class="pc-fuel-bars" id="pc-fuel-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div></div>
+  <div class="pc-fuel-amount"><strong id="pc-fuel-liters">— L</strong><small id="pc-fuel-percent">— %</small></div>
+  <div class="pc-fuel-warning" id="pc-fuel-warning" title="Stato riserva non disponibile"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16M2 21h15M6 7h7v6H6zM16 9l3 3v6a2 2 0 0 0 4 0v-8l-3-4"/></svg><span id="pc-fuel-warning-label">—</span></div>
+ </div>
 </div>
 <div class="map-controls">
 <button id="center-map" title="Centra veicolo" aria-label="Centra veicolo">◎</button>
@@ -84,4 +89,4 @@
 <div id="trips-panel" class="drawer-content" hidden><p class="note">Viaggi registrati da Geotab. Le distanze vengono mostrate come restituite dall'API.</p><div id="trips"></div></div>
 </section>
 </section><p id="message" class="message" role="status" aria-live="polite"></p>
-</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=107"></script></body></html>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="config.js"></script><script src="assets/app.js?v=101"></script></body></html>
