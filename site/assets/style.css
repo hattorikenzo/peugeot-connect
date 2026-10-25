@@ -16,3 +16,8 @@
 
 /* v1.0.0: evidenza dell'eta del dato GPS */
 .map-overlay #gps-time.gps-stale{color:#b45309;font-weight:700}
+
+/* Indicatore carburante nella scheda veicolo */
+.pc-fuel-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid #dce3ed;margin-top:12px;padding-top:12px;min-width:0}
+.pc-fuel-info{display:flex;flex-direction:column;gap:6px;min-width:0}.pc-fuel-label{font-size:12px;font-weight:650;color:#586e82}.pc-fuel-bars{display:flex;gap:4px}.pc-fuel-bars span{width:27px;height:19px;background:#e2e8ef;border-radius:3px;transition:background-color .2s}.pc-fuel-bars span.active{background:#1da16d}.pc-fuel-strip.reserve .pc-fuel-bars span.active{background:#e58b21}.pc-fuel-amount{display:flex;flex-direction:column;align-items:flex-end;white-space:nowrap}.pc-fuel-amount strong{font-size:19px;color:#173452}.pc-fuel-amount small{font-size:12px;color:#586e82}.pc-fuel-warning{display:flex;flex-direction:column;align-items:center;gap:1px;color:#9aa8b5;min-width:48px}.pc-fuel-warning svg{width:25px;height:25px}.pc-fuel-warning span{font-size:10px;font-weight:750}.pc-fuel-strip.reserve .pc-fuel-warning{color:#db7c13}
+@media(max-width:600px){.pc-fuel-strip{gap:7px;margin-top:9px;padding-top:9px}.pc-fuel-label{font-size:11px}.pc-fuel-bars{gap:3px}.pc-fuel-bars span{width:clamp(13px,5vw,21px);height:16px}.pc-fuel-amount strong{font-size:16px}.pc-fuel-warning{min-width:34px}.pc-fuel-warning svg{width:21px;height:21px}.pc-fuel-warning span{font-size:9px}}
