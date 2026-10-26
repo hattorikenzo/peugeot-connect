@@ -168,7 +168,7 @@ function toggle(logged){
 }
 function text(id,value){$(id).textContent=value}
 function showMeasurement(id,timeId,reading,format){
- text(id,reading&&Number.isFinite(reading.value)?format(reading.value):'—');
+ text(id,reading&&reading.value!=null&&Number.isFinite(Number(reading.value))?format(Number(reading.value)):'—');
  text(timeId,reading?.dateTime?'Rilevato: '+fmt(reading.dateTime)+(fresh(reading.dateTime,60)?'':' · Storico'):'Nessun dato');
 }
 function colored(id,label,level){
@@ -187,8 +187,8 @@ function vehicleState(data){
  const active=valid(a.engineActive)?Number(a.engineActive.value):null;
  const engineOn=rpm!==null?rpm>0:ignition!==null?ignition===1:active!==null?active===1:null;
  const stopped=Number.isFinite(speed)&&speed===0&&d.isDriving!==true;
- const state=moving?'moving':stopped&&gpsFresh&&engineOn===true?'idling':stopped?'stopped':'unknown';
- const label=moving?'In movimento':stopped?(gpsFresh?(engineOn===true?'Motore acceso · fermo':'Fermo'):'Fermo · ultima rilevazione'):'Stato non disponibile';
+ const state=moving?'moving':stopped&&gpsFresh&&engineOn===true?'idling':stopped&&gpsFresh&&engineOn===false?'stopped':'unknown';
+ const label=moving?'In movimento':stopped?(gpsFresh?(engineOn===true?'Motore acceso · fermo':engineOn===false?'Motore spento':'Fermo · motore non rilevato'):'Fermo · ultima rilevazione'):'Stato non disponibile';
  return {state,label,age,gpsFresh,speed};
 }
 function elapsedLabel(ms){
