@@ -83,10 +83,25 @@ function loadGoogleMaps(){
  return googleMapsPromise;
 }
 function vehicleMarkerElement(){
+ // SUV posteriore con anello di stato: il marker resta un AdvancedMarkerElement.
  const outer=document.createElement('div');
  outer.className='pc-google-marker';
- outer.style.cssText='width:60px;height:60px;border-radius:50%;border:3px solid white;box-shadow:0 2px 12px #0007;display:grid;place-items:center;background:#808995;position:relative;transform:translateY(-14px)';
- outer.innerHTML='<div class="pc-suv-rotate" style="width:33px;height:48px;transform-origin:center;will-change:transform"><svg viewBox="0 0 40 64" width="33" height="48" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="12" width="6" height="13" rx="2" fill="#1e293b"/><rect x="33" y="12" width="6" height="13" rx="2" fill="#1e293b"/><rect x="1" y="40" width="6" height="13" rx="2" fill="#1e293b"/><rect x="33" y="40" width="6" height="13" rx="2" fill="#1e293b"/><path d="M13 2Q20 0 27 2L33 12V51Q32 61 20 63Q8 61 7 51V12Z" fill="#f7fafc" stroke="#293748" stroke-width="1.5"/><path d="M10 18H30L28 26H12Z" fill="#6e9ab5" stroke="#334155"/><rect x="12" y="28" width="16" height="16" rx="3" fill="#394b5d"/><path d="M11 46H29L30 54H10Z" fill="#83abc3" stroke="#334155"/><path d="M9 8L13 7M27 7L31 8" stroke="#fff0ad" stroke-width="3"/><path d="M9 56L14 59M26 59L31 56" stroke="#ed5555" stroke-width="3"/></svg></div>';
+ outer.style.cssText='width:84px;height:90px;position:relative;display:block;overflow:visible;pointer-events:auto;cursor:pointer;transform:translateY(-12px);filter:drop-shadow(0 3px 4px #0005)';
+ outer.innerHTML=`<div class="pc-status-ring" style="position:absolute;left:7px;bottom:5px;width:70px;height:28px;border-radius:50%;background:#808995;box-shadow:0 2px 6px #0006,inset 0 0 0 5px #ffffffb8;transition:background-color .25s ease"></div>
+ <div class="pc-suv-rotate" style="position:absolute;left:10px;top:1px;width:64px;height:77px;transform-origin:50% 65%;will-change:transform;transition:transform .3s ease">
+ <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 100" width="64" height="77" role="img" aria-label="Peugeot 2008 vista posteriore">
+ <defs><linearGradient id="pc-body" x1="0" x2="1"><stop offset="0" stop-color="#b9c2ca"/><stop offset=".25" stop-color="#fff"/><stop offset=".75" stop-color="#e8edf1"/><stop offset="1" stop-color="#8b99a5"/></linearGradient><linearGradient id="pc-glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#14212e"/><stop offset="1" stop-color="#3c5668"/></linearGradient></defs>
+ <ellipse cx="42" cy="90" rx="32" ry="7" fill="#000" opacity=".2"/>
+ <path d="M14 67h10v23H12c-2 0-3-2-3-5V71c0-3 2-4 5-4Zm46 0h10c3 0 5 1 5 4v14c0 3-1 5-3 5H60Z" fill="#20262b"/>
+ <path d="M11 33 18 14C22 6 30 5 42 5s20 1 24 9l7 19 4 35-4 14c-1 5-6 8-12 8H23c-6 0-11-3-12-8L7 68Z" fill="url(#pc-body)" stroke="#4e5962" stroke-width="2"/>
+ <path d="M19 18Q22 10 32 10h20q10 0 13 8l5 24H14Z" fill="url(#pc-glass)" stroke="#53616d" stroke-width="2"/>
+ <path d="M14 43h56l3 24H11Z" fill="#e4e9ed"/><path d="M13 46h58" stroke="#88949e" stroke-width="2"/>
+ <path d="M12 53h15l-3 8H10Zm60 0H57l3 8h14Z" fill="#b71522" stroke="#fff" stroke-width="1.4"/>
+ <path d="M15 54h10m34 0h10" stroke="#fce3e3" stroke-width="2"/>
+ <path d="M26 65h32" stroke="#75818b" stroke-width="1.4"/><path d="M18 75h48" stroke="#a7b0b8" stroke-width="2"/>
+ <rect x="28" y="78" width="28" height="8" rx="2" fill="#e8edf0" stroke="#65717c" stroke-width="1"/>
+ <path d="M13 86h58l-3 5H16Z" fill="#37424c"/><path d="M20 89h11m22 0h11" stroke="#c3ccd2" stroke-width="2"/>
+ </svg></div>`;
  return outer;
 }
 function setState(state,bearing){
@@ -94,9 +109,11 @@ function setState(state,bearing){
  if(!marker)return;
  const colors={moving:'#06c93c',idling:'#ffbf00',stopped:'#f33535',unknown:'#808995'};
  const el=marker.content;
- if(el)el.style.background=colors[state]||colors.unknown;
+ const ring=el?.querySelector('.pc-status-ring');
+ if(ring)ring.style.backgroundColor=colors[state]||colors.unknown;
  const n=Number(bearing);
  if(Number.isFinite(n)&&bearing!==null&&bearing!==undefined&&state==='moving')lastBearing=((n%360)+360)%360;
+ // Il disegno del SUV e' visto da dietro: il dato bearing viene applicato al veicolo.
  const rot=el?.querySelector('.pc-suv-rotate');
  if(rot)rot.style.transform='rotate('+lastBearing+'deg)';
 }
