@@ -70,11 +70,24 @@ jobs:
       - name: Configura GitHub Pages
         uses: actions/configure-pages@v5
 
+      - name: Verifica contenuto del sito
+        run: |
+          set -euo pipefail
+          test -s site/index.html
+          test -s site/config.js
+          test -s site/v2/index.html
+          test -s site/v2/app.js
+          node --check site/v2/app.js
+
       - name: Prepara file per GitHub Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
+          name: github-pages
           path: site
+          retention-days: 2
 
       - name: Pubblica Peugeot Connect
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
