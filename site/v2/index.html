@@ -1,4 +1,4 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect 2.0</title><link rel="manifest" href="../manifest.webmanifest"><link rel="stylesheet" href="style.css?v=202"><style>
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#153f78"><title>Peugeot Connect 2.0</title><link rel="manifest" href="../manifest.webmanifest"><link rel="stylesheet" href="style.css?v=203"><style>
 /* Peugeot Connect: scheda posizione come anteprima approvata */
 .map-overlay{box-sizing:border-box!important;width:min(570px,calc(100vw - 32px))!important;min-width:0!important;max-width:calc(100vw - 32px)!important;padding:17px 20px 15px!important;border-radius:17px!important;background:rgba(255,255,255,.97)!important;color:#173452!important;box-shadow:0 5px 20px rgba(16,35,58,.22)!important;line-height:1.35!important}
 .map-overlay #vehicle-name{font-size:19px!important;font-weight:800!important;color:#183451!important;margin-bottom:15px!important}
@@ -55,12 +55,12 @@
  </div>
  <div class="pc-fuel-strip" id="pc-fuel-strip" aria-label="Carburante residuo non disponibile">
   <div class="pc-fuel-info"><span class="pc-fuel-label">Carburante residuo</span><div class="pc-fuel-bars" id="pc-fuel-bars" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div></div>
-  <div class="pc-fuel-amount"><strong id="pc-fuel-liters">— L</strong><small id="pc-fuel-percent">— %</small></div>
+  <div class="pc-fuel-amount"><strong id="pc-fuel-liters">— %</strong><small id="pc-fuel-percent">—</small></div>
   <div class="pc-fuel-warning" id="pc-fuel-warning" title="Stato riserva non disponibile"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16M2 21h15M6 7h7v6H6zM16 9l3 3v6a2 2 0 0 0 4 0v-8l-3-4"/></svg><span id="pc-fuel-warning-label">—</span></div>
- </div>
+ </div><small id="fuel-freshness"></small><small>Riserva virtuale, non spia ufficiale.</small>
 </div>
 <div class="map-controls">
-<button id="center-map" title="Centra veicolo" aria-label="Centra veicolo">◎</button>
+<button id="open-vehicle-card" title="Scheda veicolo" aria-label="Apri scheda veicolo">▤</button><button id="center-map" title="Centra veicolo" aria-label="Centra veicolo">◎</button>
 <button id="layers-toggle" title="Livelli mappa" aria-label="Scegli visualizzazione mappa" aria-expanded="false" aria-controls="layers-panel">▱</button>
 <div id="layers-panel" class="layers-panel" hidden>
   <strong>Visualizzazione</strong>
@@ -76,7 +76,7 @@
 <div id="asset-panel" class="drawer-content">
 <div class="asset-grid" id="dual-metrics"></div><p class="note">Dati con sorgente e orario. Porte ed eventi non disponibili nella API 2.1.</p><div class="detail-foot"><span id="updated"></span><span id="address">Indirizzo non richiesto</span><button id="lookup-address" type="button">Mostra indirizzo</button></div>
 </div>
-<div id="service-panel" class="drawer-content" hidden><div class="asset-grid" id="service-metrics"></div><p class="note">Valori residui OEM. Autonomia e litri non ancora validati.</p></div><div id="trips-panel" class="drawer-content" hidden><p class="note">Viaggi OEM degli ultimi 7 giorni. Tracciati non disponibili; unità distanza da verificare.</p><div id="trips"></div></div>
+<div id="service-panel" class="drawer-content" hidden><div class="asset-grid" id="service-metrics"></div><p class="note">Valori residui OEM. Autonomia e litri non ancora validati.</p></div><div id="trips-panel" class="drawer-content" hidden><p class="note">Viaggi OEM degli ultimi 7 giorni. Tracciati e distanze non ancora validati.</p><div id="trips"></div></div>
 </section>
 </section><p id="message" class="message" role="status" aria-live="polite"></p>
-</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="../config.js"></script><script src="app.js?v=202"></script></body></html>
+</main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script><script src="../config.js"></script><script src="app.js?v=203"></script></body></html>

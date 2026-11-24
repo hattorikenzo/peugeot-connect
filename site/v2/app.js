@@ -27,6 +27,7 @@ function rememberGps(status){
 function setAddress(value){text('map-address',value);text('address',value)}
 async function geocodePosition(status,force=false){
  const coords=gpsCoordinates(status);if(!coords)return;
+ const requestEpoch=authEpoch;
  const key=coords.lat.toFixed(5)+','+coords.lon.toFixed(5);
  if(addressCache.has(key)){geocodeKey=key;setAddress(addressCache.get(key));return}
  if(!force&&geocodeKey===key)return;
@@ -43,9 +44,10 @@ async function geocodePosition(status,force=false){
    const r=await fetch(u,{headers:{Accept:'application/json'}});
    if(!r.ok)throw Error('Geocodifica non disponibile');
    const d=await r.json();const value=d.display_name||'Indirizzo non disponibile';
+   if(requestEpoch!==authEpoch||!signedIn)return;
    addressCache.set(key,value);
    if(geocodeKey===key)setAddress(value);
-  }catch{if(geocodeKey===key)setAddress('Indirizzo non disponibile')}
+  }catch{if(requestEpoch===authEpoch&&signedIn&&geocodeKey===key)setAddress('Indirizzo non disponibile')}
   finally{geocodePending=null}
  })();
  await geocodePending;
@@ -62,6 +64,7 @@ function toggleVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=!mobileC
 function closeVehicleCard(){if(mobileCardQuery.matches){mobileCardOpen=false;syncVehicleCard();}}
 mobileCardQuery.addEventListener?.('change',syncVehicleCard);
 $('close-vehicle-card').addEventListener('click',closeVehicleCard);
+$('open-vehicle-card').addEventListener('click',()=>{mobileCardOpen=true;syncVehicleCard()});
 syncVehicleCard();
 const MAP_ID='11f4b4da482f19786959ddf7';
 const MAP_TYPES={standard:'roadmap',terrain:'terrain',satellite:'satellite',hybrid:'hybrid'};
@@ -181,7 +184,7 @@ function showPanel(panel){
 function toggle(logged){
  authEpoch++;signedIn=logged;$('login-panel').hidden=logged;$('dashboard').hidden=!logged;
  $('logout').hidden=!logged;$('refresh').hidden=!logged;
- if(!logged){position=null;lastGpsTime=null;lastKnownStatus=null;lastKnownOdometer=null;addressCache.clear();geocodeKey='';if(marker)marker.map=null;marker=null;map=null;$('map').replaceChildren();$('dual-metrics').replaceChildren();$('service-metrics').replaceChildren();$('trips').replaceChildren();clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=0;showPanel('map');}
+ if(!logged){cancelAnimation();mobileCardOpen=false;syncVehicleCard();setAddress('Indirizzo non richiesto');text('gps-time','—');text('summary-odometer','—');text('pc-fuel-liters','—');text('pc-fuel-percent','—');text('fuel-freshness','');text('pc-fuel-warning-label','—');text('driving','Stato non disponibile');text('speed','— km/h');Array.from($('pc-fuel-bars').children).forEach(el=>el.classList.remove('active'));position=null;lastGpsTime=null;lastKnownStatus=null;lastKnownOdometer=null;addressCache.clear();geocodeKey='';if(marker)marker.map=null;marker=null;map=null;$('map').replaceChildren();$('dual-metrics').replaceChildren();$('service-metrics').replaceChildren();$('trips').replaceChildren();clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=0;showPanel('map');}
  $('connection').textContent=logged?'Collegato':'Non collegato';
 }
 function text(id,value){$(id).textContent=value}
@@ -224,7 +227,7 @@ function updateVehicleStatus(data){
   $('gps-time').title=v.gpsFresh?'Posizione recente':'Ultima posizione registrata (dato non recente)';
  $('gps-time').classList.toggle('gps-stale',!v.gpsFresh);
  $('state-dot').className='dot '+v.state;
- if(marker){setState(v.state,d.bearing);}
+ if(marker){setState(v.state,d.bearing);}if(data.metrics?.fuel)text('fuel-freshness',meta(data.metrics.fuel));
  lastDisplayedState=v.state;
 }
 // Aggiorna l'eta del dato anche tra due interrogazioni Geotab.
@@ -238,7 +241,7 @@ function render(data){
  const odo=m.odometer?.value;text('summary-odometer',Number.isFinite(odo)?(odo/1000).toLocaleString('it-IT',{maximumFractionDigits:1})+' km':'— km');
  const p=f?.value,valid=Number.isFinite(p)&&p>=0&&p<=100;
  text('pc-fuel-liters',valid?p.toLocaleString('it-IT',{maximumFractionDigits:2})+' %':'—');
- text('pc-fuel-percent',f?.source||'—');text('pc-fuel-warning-label',({low:'Basso',reserve:'Riserva',critical:'Critico',normal:'Normale'})[data.reserve?.level]||'—');
+ text('pc-fuel-percent',f?.source||'—');text('fuel-freshness',meta(f));text('pc-fuel-warning-label',({low:'Basso',reserve:'Riserva',critical:'Critico',normal:'Normale'})[data.reserve?.level]||'—');
  $('pc-fuel-warning').title='Riserva virtuale, non spia ufficiale';$('pc-fuel-strip').title=meta(f);$('pc-fuel-strip').setAttribute('aria-label','Carburante: '+(valid?p+' %':'non disponibile')+' · '+meta(f));$('pc-fuel-strip').classList.toggle('reserve',valid&&p<=20);
  Array.from($('pc-fuel-bars').children).forEach((el,i)=>el.classList.toggle('active',valid&&i<Math.ceil(p/20)));
  $('dual-metrics').replaceChildren();$('service-metrics').replaceChildren();
@@ -246,7 +249,7 @@ function render(data){
  tile('service-metrics','Distanza residua',m.serviceDistance,'km');tile('service-metrics','Tempo residuo',m.serviceDays,'giorni');
  $('trips').replaceChildren();for(const t of Array.isArray(data.trips)?data.trips:[]){const a=document.createElement('article');a.className='trip-item';a.textContent=fmt(t.dateTime)+' → '+fmt(t.stop)+' · OEM';$('trips').append(a)}if(!$('trips').children.length)text('trips','Nessun viaggio disponibile');
  if(gpsCoordinates(d)&&!(d.source==='GO9B'&&d.stale)){setAddress('Indirizzo su richiesta');return drawMap(d,vehicleState(data).state)}
- if(marker)marker.map=null;marker=null;map=null;position=null;$('map').replaceChildren();setAddress('Posizione verificabile non disponibile');return Promise.resolve();
+ cancelAnimation();if(marker)marker.map=null;marker=null;map=null;position=null;$('map').replaceChildren();setAddress('Posizione verificabile non disponibile');return Promise.resolve();
 }
 function schedule(){clearTimeout(refreshTimer)}
 function apiFailureInfo(error){
@@ -275,9 +278,10 @@ async function load(){
   consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=Date.now();
   text('message','');
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-  try{await render(data);text('connection',data?.stale?'Dati disponibili · aggiornamento in attesa':'Dati aggiornati');}
-  catch(mapError){text('message','Dati caricati, ma mappa non disponibile: '+(mapError.message||String(mapError)));text('connection','Dati aggiornati');}
+  try{if(requestEpoch!==authEpoch||!signedIn)return;await render(data);if(requestEpoch!==authEpoch||!signedIn)return;text('connection',data?.stale?'Dati disponibili · aggiornamento in attesa':'Dati aggiornati');}
+  catch(mapError){if(requestEpoch!==authEpoch||!signedIn)return;text('message','Dati caricati, ma mappa non disponibile: '+(mapError.message||String(mapError)));text('connection','Dati aggiornati');}
  }catch(e){
+  if(requestEpoch!==authEpoch||!signedIn)return;
   const f=apiFailureInfo(e);
   consecutiveDataFailures++;
   retryDelayMs=f.permanent?60000:Math.min(60000,5000*Math.pow(2,Math.min(4,consecutiveDataFailures-1)));
@@ -287,11 +291,11 @@ async function load(){
    text('connection','Verifica accesso');
   }else if(latestData){
    // Keep the last valid dashboard visible; do not misrepresent it as live.
-   text('connection','Dati precedenti · riconnessione');
-   text('message',consecutiveDataFailures>=3?'Connessione Geotab temporaneamente non disponibile. Ultimi dati ricevuti mantenuti; nuovo tentativo automatico.':'');
+   text('connection','Dati precedenti · aggiornare manualmente');
+   text('message','Connessione Geotab non disponibile. Ultimi dati mantenuti; premi Aggiorna.');
   }else{
    text('connection','Connessione in attesa');
-   text('message',consecutiveDataFailures>=2?'Dati Geotab temporaneamente non disponibili. Nuovo tentativo automatico.':'');
+   text('message','Dati Geotab non disponibili. Premi Aggiorna.');
   }
   console.warn('Peugeot Connect: richiesta dati non riuscita', {status:f.status,attempts:consecutiveDataFailures,waitSeconds:Math.ceil(retryDelayMs/1000),reason:f.message});
  }finally{loading=false;$('refresh').disabled=false;schedule()}
@@ -302,7 +306,7 @@ $('login-form').addEventListener('submit',async e=>{
  $('password').value='';if(error){text('message',error.message);return}
  toggle(true);await load();
 });
-$('logout').addEventListener('click',async()=>{await client.auth.signOut();toggle(false)});
+$('logout').addEventListener('click',async()=>{toggle(false);const {error}=await client.auth.signOut();if(error)text('message','Disconnessione server non confermata')});
 $('refresh').addEventListener('click',load);
 $('layers-toggle').addEventListener('click',()=>{
  const panel=$('layers-panel');panel.hidden=!panel.hidden;
