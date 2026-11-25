@@ -8,12 +8,13 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
 concurrency:
   group: peugeot-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -78,13 +79,41 @@ jobs:
           test -s site/v2/index.html
           test -s site/v2/app.js
           node --check site/v2/app.js
+          test -s site/v2/percorsi/index.html
+          node --check site/v2/percorsi/app.js
 
-      - name: Prepara file per GitHub Pages
-        uses: actions/upload-pages-artifact@v4
+      - name: Crea archivio Pages
+        run: |
+          set -euo pipefail
+          tar --dereference --hard-dereference --exclude=.git --exclude=.github -C site -cf "$RUNNER_TEMP/artifact.tar" .
+          test -s "$RUNNER_TEMP/artifact.tar"
+          tar -tf "$RUNNER_TEMP/artifact.tar" | grep -Fx './v2/percorsi/index.html'
+
+      - name: Carica archivio Pages
+        uses: actions/upload-artifact@v4
         with:
           name: github-pages
-          path: site
+          path: ${{ runner.temp }}/artifact.tar
+          if-no-files-found: error
           retention-days: 2
+          overwrite: true
+          compression-level: 0
+
+      - name: Attendi visibilità archivio tramite API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 12); do
+            count=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts?name=github-pages" --jq '[.artifacts[] | select(.name == "github-pages" and .expired == false)] | length') || count=0
+            if [ "$count" = 1 ]; then
+              echo "Archivio github-pages disponibile"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::Archivio github-pages non visibile tramite API"
+          exit 1
 
       - name: Pubblica Peugeot Connect
         id: deployment
