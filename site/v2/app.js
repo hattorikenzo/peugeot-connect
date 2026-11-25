@@ -316,7 +316,7 @@ document.querySelectorAll('input[name="map-style"]').forEach(input=>input.addEve
  if(input.checked){selectMapMode(input.value);$('layers-panel').hidden=true;$('layers-toggle').setAttribute('aria-expanded','false');}
 }));
 $('center-map').addEventListener('click',()=>{if(map&&position)map.panTo({lat:position.lat,lng:position.lon})});
-document.querySelectorAll('.nav-button').forEach(b=>b.addEventListener('click',()=>showPanel(b.dataset.panel)));
+document.querySelectorAll('.nav-button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.panel==='trips'){location.assign('./percorsi/');return}showPanel(b.dataset.panel)}));
 $('close-drawer').addEventListener('click',()=>showPanel('map'));
 $('lookup-address').addEventListener('click',async()=>{
  if(!position){setAddress('Posizione non disponibile');return}
