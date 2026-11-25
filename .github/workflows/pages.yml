@@ -17,12 +17,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Scarica repository
@@ -82,23 +78,20 @@ jobs:
           test -s site/v2/percorsi/index.html
           node --check site/v2/percorsi/app.js
 
-      - name: Crea archivio Pages
-        run: |
-          set -euo pipefail
-          tar --dereference --hard-dereference --exclude=.git --exclude=.github -C site -cf "$RUNNER_TEMP/artifact.tar" .
-          test -s "$RUNNER_TEMP/artifact.tar"
-          tar -tf "$RUNNER_TEMP/artifact.tar" | grep -Fx './v2/percorsi/index.html'
-
       - name: Carica archivio Pages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-pages-artifact@v4
         with:
           name: github-pages
-          path: ${{ runner.temp }}/artifact.tar
-          if-no-files-found: error
-          retention-days: 2
-          overwrite: true
-          compression-level: 0
+          path: site
+          retention-days: 7
 
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Attendi visibilità archivio tramite API
         env:
           GH_TOKEN: ${{ github.token }}
