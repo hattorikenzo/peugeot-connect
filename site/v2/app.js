@@ -87,24 +87,26 @@ function loadGoogleMaps(){
  return googleMapsPromise;
 }
 function vehicleMarkerElement(){
- // SUV posteriore con anello di stato: il marker resta un AdvancedMarkerElement.
  const outer=document.createElement('div');
  outer.className='pc-google-marker';
- outer.style.cssText='width:84px;height:90px;position:relative;display:block;overflow:visible;pointer-events:auto;cursor:pointer;transform:translateY(-12px);filter:drop-shadow(0 3px 4px #0005)';
- outer.innerHTML=`<div class="pc-status-ring" style="position:absolute;left:7px;bottom:5px;width:70px;height:28px;border-radius:50%;background:#808995;box-shadow:0 2px 6px #0006,inset 0 0 0 5px #ffffffb8;transition:background-color .25s ease"></div>
- <div class="pc-suv-rotate" style="position:absolute;left:10px;top:1px;width:64px;height:77px;transform-origin:50% 65%;will-change:transform;transition:transform .3s ease">
- <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 84 100" width="64" height="77" role="img" aria-label="Peugeot 2008 vista posteriore">
- <defs><linearGradient id="pc-body" x1="0" x2="1"><stop offset="0" stop-color="#b9c2ca"/><stop offset=".25" stop-color="#fff"/><stop offset=".75" stop-color="#e8edf1"/><stop offset="1" stop-color="#8b99a5"/></linearGradient><linearGradient id="pc-glass" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#14212e"/><stop offset="1" stop-color="#3c5668"/></linearGradient></defs>
- <ellipse cx="42" cy="90" rx="32" ry="7" fill="#000" opacity=".2"/>
- <path d="M14 67h10v23H12c-2 0-3-2-3-5V71c0-3 2-4 5-4Zm46 0h10c3 0 5 1 5 4v14c0 3-1 5-3 5H60Z" fill="#20262b"/>
- <path d="M11 33 18 14C22 6 30 5 42 5s20 1 24 9l7 19 4 35-4 14c-1 5-6 8-12 8H23c-6 0-11-3-12-8L7 68Z" fill="url(#pc-body)" stroke="#4e5962" stroke-width="2"/>
- <path d="M19 18Q22 10 32 10h20q10 0 13 8l5 24H14Z" fill="url(#pc-glass)" stroke="#53616d" stroke-width="2"/>
- <path d="M14 43h56l3 24H11Z" fill="#e4e9ed"/><path d="M13 46h58" stroke="#88949e" stroke-width="2"/>
- <path d="M12 53h15l-3 8H10Zm60 0H57l3 8h14Z" fill="#b71522" stroke="#fff" stroke-width="1.4"/>
- <path d="M15 54h10m34 0h10" stroke="#fce3e3" stroke-width="2"/>
- <path d="M26 65h32" stroke="#75818b" stroke-width="1.4"/><path d="M18 75h48" stroke="#a7b0b8" stroke-width="2"/>
- <rect x="28" y="78" width="28" height="8" rx="2" fill="#e8edf0" stroke="#65717c" stroke-width="1"/>
- <path d="M13 86h58l-3 5H16Z" fill="#37424c"/><path d="M20 89h11m22 0h11" stroke="#c3ccd2" stroke-width="2"/>
+ outer.style.cssText='width:76px;height:76px;position:relative;display:block;overflow:visible;pointer-events:auto;cursor:pointer;transform:translateY(50%);filter:drop-shadow(0 2px 3px #0005)';
+ outer.innerHTML=`<div class="pc-status-ring" style="position:absolute;inset:3px;border-radius:50%;background:#808995;box-shadow:inset 0 0 0 4px #ffffffb8;opacity:.85;transition:background-color .25s ease"></div>
+ <div class="pc-suv-rotate" style="position:absolute;inset:0;transform-origin:50% 50%;will-change:transform;transition:transform .3s ease">
+ <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="76" height="76" role="img" aria-label="Peugeot 2008 blu elettrico, muso verso nord a zero gradi">
+ <defs><linearGradient id="pc-blue"><stop stop-color="#003786"/><stop offset=".22" stop-color="#168dff"/><stop offset=".48" stop-color="#0874ed"/><stop offset=".8" stop-color="#0053c4"/><stop offset="1" stop-color="#002b70"/></linearGradient><linearGradient id="pc-window" x2="0" y2="1"><stop stop-color="#607e98"/><stop offset=".45" stop-color="#20394e"/><stop offset="1" stop-color="#101c2a"/></linearGradient></defs>
+ <rect x="28" y="9" width="48" height="88" rx="15" fill="#000" opacity=".25"/>
+ <g fill="#18212b"><rect x="23" y="18" width="9" height="19" rx="3"/><rect x="68" y="18" width="9" height="19" rx="3"/><rect x="23" y="67" width="9" height="19" rx="3"/><rect x="68" y="67" width="9" height="19" rx="3"/></g>
+ <path d="M30 15Q33 6 50 6T70 15L74 30 73 79Q72 94 62 94H38Q28 94 27 79L26 30Z" fill="url(#pc-blue)" stroke="#002b70" stroke-width="1.5"/>
+ <path d="M33 14Q50 9 67 14L64 28H36Z" fill="#258cff" stroke="#1263bc"/>
+ <path d="M34 31Q50 26 66 31L62 43H38Z" fill="url(#pc-window)" stroke="#102c48"/>
+ <path d="M33 36L35 69 29 64 29 42ZM67 36L65 69 71 64 71 42Z" fill="#152b40"/>
+ <rect x="38" y="45" width="24" height="25" rx="3" fill="#0865d9" stroke="#4aa4ff"/>
+ <path d="M38 73H62L66 83Q50 87 34 83Z" fill="url(#pc-window)"/>
+ <path d="M29 19L39 16M61 16L71 19M29 20V27M71 20V27" stroke="#e9f8ff" stroke-width="2.7" stroke-linecap="round"/>
+ <path d="M40 10H60" stroke="#152334" stroke-width="3" stroke-linecap="round"/>
+ <path d="M31 87H40M60 87H69" stroke="#ff334a" stroke-width="3.5" stroke-linecap="round"/>
+ <path d="M39 91H61" stroke="#142536" stroke-width="2"/>
+ <path d="M29 35L23 37 23 42 29 41M71 35L77 37 77 42 71 41" fill="#0874ed" stroke="#003786"/>
  </svg></div>`;
  return outer;
 }
@@ -116,8 +118,8 @@ function setState(state,bearing){
  const ring=el?.querySelector('.pc-status-ring');
  if(ring)ring.style.backgroundColor=colors[state]||colors.unknown;
  const n=Number(bearing);
- if(Number.isFinite(n)&&bearing!==null&&bearing!==undefined&&state==='moving')lastBearing=((n%360)+360)%360;
- // Il disegno del SUV e' visto da dietro: il dato bearing viene applicato al veicolo.
+ if(Number.isFinite(n)&&bearing!==null&&bearing!==undefined&&bearing!==''&&state==='moving'){const target=((n%360)+360)%360;lastBearing+=((target-lastBearing%360+540)%360)-180;}
+ // Muso verso nord a 0 gradi; rotazione sul percorso angolare piu breve.
  const rot=el?.querySelector('.pc-suv-rotate');
  if(rot)rot.style.transform='rotate('+lastBearing+'deg)';
 }
@@ -169,7 +171,7 @@ async function drawMap(status,state){
  }
  position={lat,lon};
  if(status.dateTime&&(!lastGpsTime||new Date(status.dateTime)>new Date(lastGpsTime)))lastGpsTime=status.dateTime;
- setState(state,status.bearing);
+ setState(state,!status.stale&&fresh(status.dateTime,2)?status.bearing:null);
 }
 function showPanel(panel){
  const open=panel!=='map';$('drawer').hidden=!open;
@@ -184,7 +186,7 @@ function showPanel(panel){
 function toggle(logged){
  authEpoch++;signedIn=logged;$('login-panel').hidden=logged;$('dashboard').hidden=!logged;
  $('logout').hidden=!logged;$('refresh').hidden=!logged;
- if(!logged){cancelAnimation();mobileCardOpen=false;syncVehicleCard();setAddress('Indirizzo non richiesto');text('gps-time','—');text('summary-odometer','—');text('pc-fuel-liters','—');text('pc-fuel-percent','—');text('fuel-freshness','');text('pc-fuel-warning-label','—');text('driving','Stato non disponibile');text('speed','— km/h');Array.from($('pc-fuel-bars').children).forEach(el=>el.classList.remove('active'));position=null;lastGpsTime=null;lastKnownStatus=null;lastKnownOdometer=null;addressCache.clear();geocodeKey='';if(marker)marker.map=null;marker=null;map=null;$('map').replaceChildren();$('dual-metrics').replaceChildren();$('service-metrics').replaceChildren();$('trips').replaceChildren();clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=0;showPanel('map');}
+ if(!logged){cancelAnimation();mobileCardOpen=false;syncVehicleCard();setAddress('Indirizzo non richiesto');text('gps-time','—');text('summary-odometer','—');text('pc-fuel-liters','—');text('pc-fuel-percent','—');text('fuel-freshness','');text('pc-fuel-warning-label','—');text('driving','Stato non disponibile');text('speed','— km/h');Array.from($('pc-fuel-bars').children).forEach(el=>el.classList.remove('active'));position=null;lastGpsTime=null;lastKnownStatus=null;lastKnownOdometer=null;lastBearing=0;addressCache.clear();geocodeKey='';if(marker)marker.map=null;marker=null;map=null;$('map').replaceChildren();$('dual-metrics').replaceChildren();$('service-metrics').replaceChildren();$('trips').replaceChildren();clearTimeout(refreshTimer);cancelAnimation();latestData=null;lastDisplayedState=null;consecutiveDataFailures=0;retryDelayMs=0;lastGoodDataAt=0;showPanel('map');}
  $('connection').textContent=logged?'Collegato':'Non collegato';
 }
 function text(id,value){$(id).textContent=value}
@@ -227,7 +229,7 @@ function updateVehicleStatus(data){
   $('gps-time').title=v.gpsFresh?'Posizione recente':'Ultima posizione registrata (dato non recente)';
  $('gps-time').classList.toggle('gps-stale',!v.gpsFresh);
  $('state-dot').className='dot '+v.state;
- if(marker){setState(v.state,d.bearing);}if(data.metrics?.fuel)text('fuel-freshness',meta(data.metrics.fuel));
+ if(marker){setState(v.state,v.gpsFresh?d.bearing:null);}if(data.metrics?.fuel)text('fuel-freshness',meta(data.metrics.fuel));
  lastDisplayedState=v.state;
 }
 // Aggiorna l'eta del dato anche tra due interrogazioni Geotab.
